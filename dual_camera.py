@@ -35,6 +35,7 @@ class DualCamera:
             composed_frame = stack_frames_vertically(frame1, frame2, final_width, final_height)
             if composed_frame is not None:
                 cv2.imshow("Pressione espaco para continuar...", composed_frame)
+                cv2.destroyAllWindows()
 
             if cv2.waitKey(1) & 0xFF == ord(' '):
                 break

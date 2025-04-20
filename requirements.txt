@@ -1,0 +1,12 @@
+--index-url https://download.pytorch.org/whl/cu121
+
+numpy==1.26.4
+opencv-python==4.11.0.86
+pygrabber==0.2
+pyserial==3.5
+torch==2.2.2+cu121
+torchaudio==2.2.2+cu121
+torchvision==0.17.2+cu121
+
+ultralytics~=8.3.111
+svg.path==6.3
