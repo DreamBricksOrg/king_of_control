@@ -16,8 +16,8 @@ class KingOfControl:
         print("Init Arduino")
         self.board = HexagonsBoard(port=param.ARDUINO_COM_PORT, baudrate=param.ARDUINO_BAUD_RATE)
         print("Init Board Model")
-        self.hex_model_cam1 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET)
-        self.hex_model_cam2 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET)
+        self.hex_model_cam1 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=(0, param.CAMERA_RESOLUTION[1]))
+        self.hex_model_cam2 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=param.CAMERA_RESOLUTION)
 
     def camera_setup(self):
         final_width = 640
@@ -56,15 +56,23 @@ class KingOfControl:
 
                     self.hex_model_cam1.draw_hexagons(frame1, color=(100, 100, 100))
                     self.hex_model_cam1.draw_polylines(frame1, hexagon, color=(0, 255, 255))
-
-                #hex = self.hex_model_cam1.get_hex_under_ball(bbox1)
+                    #hex = self.hex_model_cam1.get_hex_under_ball(bbox1)
             else:
-                bbox2 = None #ball_detector.detect_best(frame2)
+                bbox2 = ball_detector.detect_best(frame2)
                 if bbox2 is not None:
                     idx, enabled_polygon = self.hex_model_cam2.get_polygon_under_ball(bbox2)
                     if enabled_polygon:
                         hex = self.hex_model_cam2.hex_coordinates[idx]
                         hexagon = self.hex_model_cam2.pers_polygons[idx]
+
+                        if True:
+                            label = "Ball"
+                            x1, y1, x2, y2 = bbox2
+                            cv2.rectangle(frame2, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+                            cv2.putText(frame2, label, (int(x1), int(y1) - 10),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
+                        self.hex_model_cam2.draw_hexagons(frame2, color=(100, 100, 100))
                         self.hex_model_cam2.draw_polylines(frame2, hexagon, color=(0, 255, 255))
                         #hex = self.hex_model_cam2.get_hex_under_ball(bbox2)
 
@@ -75,7 +83,7 @@ class KingOfControl:
                     self.board.set_hexagon(*hex, (255, 255, 0))
                 last_hex = hex
 
-            composed_frame = frame1 #stack_frames_vertically(frame1, frame2, 640, 720)
+            composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
             cv2.imshow("Pressione espaco para continuar...", composed_frame)
 
             if cv2.waitKey(1) & 0xFF == ord(' '):

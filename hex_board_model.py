@@ -6,9 +6,10 @@ from svg_parse import parse_svg_to_polylines
 
 
 class HexBoardModel:
-    def __init__(self, svg_file, center_offset):
+    def __init__(self, svg_file, center_offset, cam_pos):
         self.pers_polygons = None
         self.floor_quad = None
+        self.cam_pos = cam_pos
         unsorted_hexagons = self.load_hexagons(svg_file, center_offset)
         self.hexagons = self.sort_hexes(unsorted_hexagons, 5)
         self.hex_coordinates = self.create_hex_coordinates()
@@ -24,9 +25,10 @@ class HexBoardModel:
                                  [-hibw,  hibh]]], dtype=np.float32)
 
     def get_polygon_under_ball(self, ball_bbox):
-        x1, y1, x2, y2 = ball_bbox
+        #x1, y1, x2, y2 = ball_bbox
         #ball_pos = ((x1+x2) / 2, y2)
-        ball_pos = (x1, y2)
+        #ball_pos = (x1, y2)
+        ball_pos = self.ellipse_line_intersection(ball_bbox, self.cam_pos)
 
         return self.find_polygon_contains_point(self.pers_polygons, ball_pos)
 
@@ -214,10 +216,37 @@ class HexBoardModel:
 
         return result
 
+    @staticmethod
+    def ellipse_line_intersection(bbox, external_point):
+        x_min, y_min, x_max, y_max = bbox
+        px, py = external_point
+
+        # Compute ellipse center and radii
+        cx = (x_min + x_max) / 2
+        cy = (y_min + y_max) / 2
+        rx = (x_max - x_min) / 2
+        ry = (y_max - y_min) / 2
+
+        # Direction vector from center to point
+        dx = px - cx
+        dy = py - cy
+
+        if dx == 0 and dy == 0:
+            raise ValueError("The external point cannot be the center of the ellipse.")
+
+        # Normalize direction vector for intersection with ellipse
+        scale = 1.0 / np.sqrt((dx ** 2) / rx ** 2 + (dy ** 2) / ry ** 2)
+
+        # Intersection point
+        ix = cx + dx * scale
+        iy = cy + dy * scale
+
+        return ix, iy
+
 
 if __name__ == "__main__":
     import parameters as param
-    hex_model = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET)
+    hex_model = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=(0, 0))
 
     hex_model
 
