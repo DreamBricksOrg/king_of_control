@@ -27,10 +27,10 @@ class CameraInitializer:
 
         print(f"Setting parameters for camera {self.cam_id}")
         # Optional: disable auto exposure and autofocus to prevent slow start
-        cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)  # 0.25 = manual, 0.75 = auto
-        cap.set(cv2.CAP_PROP_EXPOSURE, -8)         # You can tune this
-        cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)         # Turn off autofocus
-        cap.set(cv2.CAP_PROP_FOCUS, 0)             # Set a fixed focus value
+        #cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)  # 0.25 = manual, 0.75 = auto
+        #cap.set(cv2.CAP_PROP_EXPOSURE, -3)         # You can tune this
+        #cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)         # Turn off autofocus
+        #cap.set(cv2.CAP_PROP_FOCUS, 0)             # Set a fixed focus value
 
         # Warm up camera (optional but helps)
         for _ in range(5):
