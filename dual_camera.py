@@ -1,14 +1,36 @@
 import cv2
 from cv2_utils import stack_frames_vertically
-
+import threading
+from camera_initializer import CameraInitializer
 
 class DualCamera:
     def __init__(self, cam1_id, cam2_id, res1=(640, 480), res2=(640, 480)):
-        print(f"start camera {cam1_id}")
-        self.cam1 = self.initialize_camera(cam1_id, *res1)
-        print(f"start camera {cam2_id}")
-        self.cam2 = self.initialize_camera(cam2_id, *res2)
+        #print(f"start camera {cam1_id}")
+        #self.cam1 = self.initialize_camera(cam1_id, *res1)
+        #print(f"start camera {cam2_id}")
+        #self.cam2 = self.initialize_camera(cam2_id, *res2)
 
+        camera_caps = self.initialize_cameras(cam1_id, cam2_id)
+        # Now you can access camera_caps[0] and camera_caps[1]
+        self.cam1 = camera_caps[0]
+        self.cam2 = camera_caps[1]
+
+    @staticmethod
+    def initialize_cameras(cam1_id, cam2_id):
+        # Launch threads to initialize both cameras
+        camera_caps = {}
+        threads = []
+
+        for cam_id in [cam1_id, cam2_id]:
+            init = CameraInitializer(cam_id, 1280, 720, camera_caps)
+            t = threading.Thread(target=init.initialize)
+            t.start()
+            threads.append(t)
+
+        for t in threads:
+            t.join()
+
+        return camera_caps
 
     @staticmethod
     def initialize_camera(cam_id, desired_width, desired_height):
