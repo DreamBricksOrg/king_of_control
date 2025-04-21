@@ -44,6 +44,11 @@ if __name__ == "__main__":
         #time.sleep(3)
         sender.read_serial()
         print("Sending data...")
+        for col in range(3):
+            for row in range(8):
+                sender.send_bytes(1, col, row, 255, 255, 255)
+                time.sleep(0.2)
+
         sender.send_bytes(1, 0, 7, 255, 255, 0)
         time.sleep(.5)
         sender.send_bytes(1, 1, 7, 255, 255, 0)
