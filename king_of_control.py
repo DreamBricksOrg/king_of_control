@@ -1,9 +1,11 @@
+import cv2
 import parameters as param
 from hexagons_board import HexagonsBoard
 from hex_board_model import HexBoardModel
 from yolo_object_detector import YoloObjectDetector
 from dual_camera import DualCamera
 import time
+from cv2_utils import stack_frames_vertically
 
 class KingOfControl:
     def __init__(self):
@@ -20,7 +22,24 @@ class KingOfControl:
 
     def calibration(self):
         yolo_object_detector = YoloObjectDetector(class_id=0, model_path=param.YOLO_MODEL_HEXAGON)
-        self.get_calibration_points(yolo_object_detector)
+        floor_quad1, floor_quad2 = self.get_calibration_points(yolo_object_detector)
+
+        self.hex_model_cam1.set_calibration_points(floor_quad1)
+        self.hex_model_cam2.set_calibration_points(floor_quad2)
+
+        # debug output
+        frame1, frame2 = self.cameras.get_frames()
+        self.hex_model_cam1.draw_hexagons(frame1, color=(80, 80, 80))
+        self.hex_model_cam2.draw_hexagons(frame2, color=(80, 80, 80))
+        composed_frame = stack_frames_vertically(frame1, frame2, param.CAMERA_RESOLUTION[0]/2, param.CAMERA_RESOLUTION[1])
+
+        if composed_frame is not None:
+            cv2.imshow("Pressione espaco para continuar...", composed_frame)
+
+        while True:
+            if cv2.waitKey(1) & 0xFF == ord(' '):
+                cv2.destroyAllWindows()
+                break
 
     def get_calibration_points(self, yolo_object_detector):
         hex_cal_coord = [(2, 1), (0, 1), (0, 7), (2, 7)]
@@ -40,33 +59,34 @@ class KingOfControl:
             frame1, frame2 = self.cameras.get_frames()
 
             # find it in both cameras
-            result1 = yolo_object_detector.detect(frame1)
-            result2 = yolo_object_detector.detect(frame2)
-
-            try:
-                bbox1 = self.find_best_bbox(result1)
-                bboxes1.append(bbox1)
-            except:
+            bbox1 = yolo_object_detector.detect_best(frame1)
+            if bbox1 is None:
                 num_exceptions1 += 1
+                if num_exceptions1 > 5:
+                    print("Erro na calibracao da camera 1")
+                    exit(1)
+                time.sleep(0.3)
+                continue
 
-            if num_exceptions2 > 5:
-                print("Erro na calibracao da camera 1")
-                exit(1)
-
-            try:
-                bbox2 = self.find_best_bbox(result2)
-                bboxes2.append(bbox2)
-            except:
+            bbox2 = yolo_object_detector.detect_best(frame2)
+            if bbox2 is None:
                 num_exceptions2 += 1
+                if num_exceptions2 > 5:
+                    print("Erro na calibracao da camera 2")
+                    exit(1)
+                time.sleep(0.3)
+                continue
 
-            if num_exceptions2 > 5:
-                print("Erro na calibracao da camera 2")
-                exit(1)
+            bboxes1.append(bbox1)
+            bboxes2.append(bbox2)
 
             coord_idx += 1
             num_exceptions1 = 0
             num_exceptions2 = 0
 
-        def find_best_bbox():
-            pass
+        floor_quad1 = self.hex_model_cam1.calculate_floor_quad(bboxes1)
+        floor_quad2 = self.hex_model_cam1.calculate_floor_quad(bboxes2)
+
+        return floor_quad1, floor_quad2
+
 

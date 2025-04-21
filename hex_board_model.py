@@ -4,14 +4,43 @@ import numpy as np
 import math
 from svg_parse import parse_svg_to_polylines
 
+
 class HexBoardModel:
     def __init__(self, svg_file, center_offset):
+        self.pers_polygons = None
+        self.floor_quad = None
         self.hexagons = self.load_hexagons(svg_file, center_offset)
+
+        ibw = 721/10
+        ibh = 1868/10
+        hibw = ibw / 2
+        hibh = ibh / 2
+
+        self.bounds = np.array([[[-hibw, -hibh],
+                                 [ hibw, -hibh],
+                                 [ hibw,  hibh],
+                                 [-hibw,  hibh]]], dtype=np.float32)
+
+    def set_calibration_points(self, floor_quad):
+        self.floor_quad = floor_quad
+        self.pers_polygons = HexBoardModel.create_perspective_polygons(self.floor_quad, self.bounds, self.hexagons)
+
+    def draw_hexagons(self, frame, color=(255, 0, 0)):
+        self.draw_perspective_polygons(frame, self.floor_quad, self.bounds, self.hexagons, color)
 
     @staticmethod
     def load_hexagons(svg_file, center_offset):
         result = parse_svg_to_polylines(svg_file, offset=center_offset)
         result = [HexBoardModel.remove_consecutive_duplicates(polygon) for polygon in result]
+        return result
+
+    @staticmethod
+    def calculate_floor_quad(bboxes):
+        result = []
+        for bbox in bboxes:
+            x1, y1, x2, y2 = bbox
+            result.append(((x1+x2)/2, (y1+y2)/2))
+
         return result
 
     @staticmethod
@@ -23,54 +52,6 @@ class HexBoardModel:
     def draw_polygons(frame, polygons, color=(255, 0, 0), thickness=2):
         for polygon in polygons:
             HexBoardModel.draw_polylines(frame, polygon, color, thickness)
-
-    @staticmethod
-    def draw_hexagon(frame, center, radius, color=(255, 255, 0), thickness=2):
-        cx, cy = center
-        points = []
-        for i in range(6):
-            angle_deg = 60 * i - 30  # Start flat-top
-            angle_rad = math.radians(angle_deg)
-            x = int(cx + radius * math.cos(angle_rad))
-            y = int(cy + radius * math.sin(angle_rad))
-            points.append([x, y])
-        points = np.array([points], np.int32)
-        cv2.polylines(frame, points, isClosed=True, color=color, thickness=thickness)
-
-    @staticmethod
-    def create_hexagon(radius=100):
-        # Create flat-top hexagon centered at origin
-        points = []
-        for i in range(6):
-            angle_deg = 60 * i - 30
-            angle_rad = math.radians(angle_deg)
-            x = radius * math.cos(angle_rad)
-            y = radius * math.sin(angle_rad)
-            points.append([x, y])
-        return np.array([points], dtype=np.float32)
-
-    @staticmethod
-    def draw_perspective_hexagon(frame, floor_quad, hex_radius):
-        # Create a flat hexagon centered at (0, 0)
-        hex_pts = HexBoardModel.create_hexagon(hex_radius)
-
-        # Compute bounding box of hexagon
-        hex_bounds = np.array([[[-hex_radius * .8, -hex_radius],
-                                [hex_radius * .8, -hex_radius],
-                                [hex_radius * .8, hex_radius],
-                                [-hex_radius * .8, hex_radius]]], dtype=np.float32)
-
-        # Define where that box should map to in the image (the floor quad)
-        np_floor_quad = np.array([floor_quad], dtype=np.float32)
-
-        # Compute homography to warp flat hexagon to the floor quad
-        H = cv2.getPerspectiveTransform(hex_bounds[0], np_floor_quad[0])
-
-        # Apply the same transform to the hexagon points
-        hex_transformed = cv2.perspectiveTransform(hex_pts, H).astype(int)
-
-        # Draw hexagon on the frame
-        cv2.polylines(frame, hex_transformed, isClosed=True, color=(0, 255, 0), thickness=2)
 
     @staticmethod
     def remove_consecutive_duplicates(points):
