@@ -4,21 +4,27 @@ from cv2_utils import stack_frames_vertically
 
 class DualCamera:
     def __init__(self, cam1_id, cam2_id, res1=(640, 480), res2=(640, 480)):
-        self.cam1 = cv2.VideoCapture(cam1_id)
-        self.cam2 = cv2.VideoCapture(cam2_id)
+        print(f"start camera {cam1_id}")
+        self.cam1 = self.initialize_camera(cam1_id, *res1)
+        print(f"start camera {cam2_id}")
+        self.cam2 = self.initialize_camera(cam2_id, *res2)
 
-        # Set resolution for camera 1
-        self.cam1.set(cv2.CAP_PROP_FRAME_WIDTH, res1[0])
-        self.cam1.set(cv2.CAP_PROP_FRAME_HEIGHT, res1[1])
 
-        # Set resolution for camera 2
-        self.cam2.set(cv2.CAP_PROP_FRAME_WIDTH, res2[0])
-        self.cam2.set(cv2.CAP_PROP_FRAME_HEIGHT, res2[1])
+    @staticmethod
+    def initialize_camera(cam_id, desired_width, desired_height):
+        cap = cv2.VideoCapture(cam_id)
+        if not cap.isOpened():
+            raise RuntimeError(f"Camera {cam_id} could not be opened.")
 
-        if not self.cam1.isOpened():
-            raise ValueError(f"Camera with ID {cam1_id} could not be opened.")
-        if not self.cam2.isOpened():
-            raise ValueError(f"Camera with ID {cam2_id} could not be opened.")
+        current_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        current_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        if current_width != desired_width or current_height != desired_height:
+            print(f"set resolution for camera {cam_id}")
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, desired_width)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, desired_height)
+
+        return cap
 
     def get_frames(self):
         ret1, frame1 = self.cam1.read()
@@ -35,9 +41,9 @@ class DualCamera:
             composed_frame = stack_frames_vertically(frame1, frame2, final_width, final_height)
             if composed_frame is not None:
                 cv2.imshow("Pressione espaco para continuar...", composed_frame)
-                cv2.destroyAllWindows()
 
             if cv2.waitKey(1) & 0xFF == ord(' '):
+                cv2.destroyAllWindows()
                 break
 
     def release(self):
