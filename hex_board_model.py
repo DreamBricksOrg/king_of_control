@@ -9,7 +9,9 @@ class HexBoardModel:
     def __init__(self, svg_file, center_offset):
         self.pers_polygons = None
         self.floor_quad = None
-        self.hexagons = self.load_hexagons(svg_file, center_offset)
+        unsorted_hexagons = self.load_hexagons(svg_file, center_offset)
+        self.hexagons = self.sort_hexes(unsorted_hexagons, 5)
+        self.hex_coordinates = self.create_hex_coordinates()
 
         ibw = 721/10
         ibh = 1868/10
@@ -21,9 +23,27 @@ class HexBoardModel:
                                  [ hibw,  hibh],
                                  [-hibw,  hibh]]], dtype=np.float32)
 
+    def get_polygon_under_ball(self, ball_bbox):
+        x1, y1, x2, y2 = ball_bbox
+        #ball_pos = ((x1+x2) / 2, y2)
+        ball_pos = (x1, y2)
+
+        return self.find_polygon_contains_point(self.pers_polygons, ball_pos)
+
+    def get_hex_under_ball(self, ball_bbox):
+        idx, enabled_polygon = self.get_polygon_under_ball(ball_bbox)
+        if enabled_polygon is None:
+            return None
+
+        hex = self.hex_coordinates[idx]
+
+        return hex
+
     def set_calibration_points(self, floor_quad):
         self.floor_quad = floor_quad
         self.pers_polygons = HexBoardModel.create_perspective_polygons(self.floor_quad, self.bounds, self.hexagons)
+        for i in range(len(self.pers_polygons)):
+            print(f"{i:02d} - {self.hex_coordinates[i]} - Pers:{len(self.pers_polygons[i])}:{self.pers_polygons[i]} - Hex:{len(self.hexagons[i])}:{self.hexagons[i]}")
 
     def draw_hexagons(self, frame, color=(255, 0, 0)):
         self.draw_perspective_polygons(frame, self.floor_quad, self.bounds, self.hexagons, color)
@@ -160,8 +180,44 @@ class HexBoardModel:
 
     @staticmethod
     def find_polygon_contains_point(polygons, point):
-        for polygon in polygons:
+        for idx, polygon in enumerate(polygons):
             if HexBoardModel.is_point_in_polygon(point, polygon):
-                return polygon
-        return None
+                return idx, polygon
+        return -1, None
+
+    @staticmethod
+    def get_avg_point(hex):
+        sum_points_x = 0
+        sum_points_y = 0
+        for point_idx in range(len(hex)-1):
+            points = hex[point_idx]
+            sum_points_x += points[0]
+            sum_points_y += points[1]
+        avg_point = (math.trunc(sum_points_x/len(hex)), math.floor(sum_points_y/len(hex)))
+        return avg_point
+
+    @staticmethod
+    def sort_hexes(hexes, t):
+        def sort_key(hex):
+            x, y = HexBoardModel.get_avg_point(hex)
+            return (y // t, -x)
+
+        return sorted(hexes, key=sort_key)
+
+    @staticmethod
+    def create_hex_coordinates():
+        result = []
+        for row in range(8):
+            num_cols = 3 if row % 2 == 1 else 2
+            for col in range(num_cols):
+                result.append((col, row))
+
+        return result
+
+
+if __name__ == "__main__":
+    import parameters as param
+    hex_model = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET)
+
+    hex_model
 

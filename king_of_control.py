@@ -5,7 +5,7 @@ from hex_board_model import HexBoardModel
 from yolo_object_detector import YoloObjectDetector
 from dual_camera import DualCamera
 import time
-from cv2_utils import stack_frames_vertically
+from cv2_utils import stack_frames_vertically, draw_cross
 
 
 class KingOfControl:
@@ -26,16 +26,68 @@ class KingOfControl:
         cv2.destroyAllWindows()
 
     def calibration(self):
-        yolo_object_detector = YoloObjectDetector(class_id=0, model_path=param.YOLO_MODEL_HEXAGON)
-        floor_quad1, floor_quad2 = self.get_calibration_points(yolo_object_detector)
+        hex_detector = YoloObjectDetector(class_id=0, model_path=param.YOLO_MODEL_HEXAGON)
+        floor_quad1, floor_quad2 = self.get_calibration_points(hex_detector)
 
         self.hex_model_cam1.set_calibration_points(floor_quad1)
         self.hex_model_cam2.set_calibration_points(floor_quad2)
 
-        # debug output
+    def track_ball(self):
+        ball_detector = YoloObjectDetector(class_id=32, model_path=param.YOLO_MODEL_BALL)
+        last_hex = None
+        while True:
+            frame1, frame2 = self.cameras.get_frames()
+
+            bbox1 = ball_detector.detect_best(frame1)
+
+            hex = None
+            if bbox1 is not None:
+                idx, enabled_polygon = self.hex_model_cam1.get_polygon_under_ball(bbox1)
+                if enabled_polygon:
+                    hex = self.hex_model_cam1.hex_coordinates[idx]
+                    hexagon = self.hex_model_cam1.pers_polygons[idx]
+
+                    if True:
+                        label = "Ball"
+                        x1, y1, x2, y2 = bbox1
+                        cv2.rectangle(frame1, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+                        cv2.putText(frame1, label, (int(x1), int(y1) - 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
+                    self.hex_model_cam1.draw_hexagons(frame1, color=(100, 100, 100))
+                    self.hex_model_cam1.draw_polylines(frame1, hexagon, color=(0, 255, 255))
+
+                #hex = self.hex_model_cam1.get_hex_under_ball(bbox1)
+            else:
+                bbox2 = None #ball_detector.detect_best(frame2)
+                if bbox2 is not None:
+                    idx, enabled_polygon = self.hex_model_cam2.get_polygon_under_ball(bbox2)
+                    if enabled_polygon:
+                        hex = self.hex_model_cam2.hex_coordinates[idx]
+                        hexagon = self.hex_model_cam2.pers_polygons[idx]
+                        self.hex_model_cam2.draw_polylines(frame2, hexagon, color=(0, 255, 255))
+                        #hex = self.hex_model_cam2.get_hex_under_ball(bbox2)
+
+            if hex != last_hex:
+                if last_hex is not None:
+                    self.board.set_hexagon(*last_hex, (0, 0, 0))
+                if hex is not None:
+                    self.board.set_hexagon(*hex, (255, 255, 0))
+                last_hex = hex
+
+            composed_frame = frame1 #stack_frames_vertically(frame1, frame2, 640, 720)
+            cv2.imshow("Pressione espaco para continuar...", composed_frame)
+
+            if cv2.waitKey(1) & 0xFF == ord(' '):
+                cv2.destroyAllWindows()
+                break
+
+    def calibration_debug(self):
+        magenta = (255, 0, 255)
+
         frame1, frame2 = self.cameras.get_frames()
-        self.hex_model_cam1.draw_hexagons(frame1, color=(80, 80, 80))
-        self.hex_model_cam2.draw_hexagons(frame2, color=(80, 80, 80))
+        self.hex_model_cam1.draw_hexagons(frame1, color=magenta)
+        self.hex_model_cam2.draw_hexagons(frame2, color=magenta)
         composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
 
         if composed_frame is not None:
@@ -104,8 +156,39 @@ class KingOfControl:
                 cv2.destroyAllWindows()
                 break
 
+    def debug_hex_led_mapping(self):
+        hex_id = 0
+        num_hexes = len(self.hex_model_cam1.hexagons)
+        while True:
+            frame1, frame2 = self.cameras.get_frames()
+
+            hexagon = self.hex_model_cam1.hexagons[hex_id]
+            pers_hex = self.hex_model_cam1.pers_polygons[hex_id]
+            hex_coord = self.hex_model_cam1.hex_coordinates[(hex_id+1) % num_hexes]
+
+            self.hex_model_cam1.draw_hexagons(frame1, color=(100, 100, 100))
+            self.hex_model_cam1.draw_polylines(frame1, pers_hex, color=(0, 255, 255))
+
+            composed_frame = frame1 #stack_frames_vertically(frame1, frame2, 640, 720)
+            cv2.imshow("Pressione espaco para continuar...", composed_frame)
+
+            print(f"hexagon: {len(hexagon)}-{self.hex_model_cam1.get_avg_point(hexagon)}-{hexagon}")
+            print(f"pers_hex: {len(pers_hex)}-{self.hex_model_cam1.get_avg_point(pers_hex)}-{pers_hex}")
+            print(f"hex_coord: {hex_coord}")
+            self.board.set_hexagon(*hex_coord, (255, 255, 0))
+            time.sleep(2)
+            self.board.set_hexagon(*hex_coord, (0, 0, 0))
+            hex_id = (hex_id + 1) % num_hexes
+
+            if cv2.waitKey(1) & 0xFF == ord(' '):
+                cv2.destroyAllWindows()
+                break
+
 
 if __name__ == "__main__":
     koc = KingOfControl();
-    koc.camera_setup()
+    #koc.camera_setup()
     koc.calibration()
+    #koc.calibration_debug()
+    #koc.debug_hex_led_mapping()
+    koc.track_ball()
