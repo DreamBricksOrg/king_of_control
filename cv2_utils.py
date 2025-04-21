@@ -2,6 +2,24 @@ import cv2
 import numpy as np
 
 
+def draw_cross(frame, center, size=10, color=(0, 255, 0), thickness=2):
+    """
+    Draws a cross on the frame at the specified center point.
+
+    Parameters:
+        frame (np.ndarray): The image/frame to draw on.
+        center (tuple): (x, y) coordinates of the cross center.
+        size (int): Half-length of the cross arms.
+        color (tuple): BGR color (default: green).
+        thickness (int): Line thickness.
+    """
+    x, y = center
+    # Draw horizontal line
+    cv2.line(frame, (x - size, y), (x + size, y), color, thickness)
+    # Draw vertical line
+    cv2.line(frame, (x, y - size), (x, y + size), color, thickness)
+
+
 def stack_frames_vertically(frame1, frame2, final_width, final_height):
 
     if frame1 is None or frame2 is None:
