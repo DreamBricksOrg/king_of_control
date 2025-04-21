@@ -87,12 +87,12 @@ class HexBoardModel:
         # Apply the same transform to the polygon points
         np_poly_transformed = cv2.perspectiveTransform(np_polygon, H).astype(int)
 
-        print(np_poly_transformed)
+        #print(np_poly_transformed)
 
         # transform into a list of points
         poly_transformed = [(point[0], point[1]) for point in np_poly_transformed[0]]
         # poly_transformed = remove_consecutive_duplicates(poly_transformed)
-        print(poly_transformed)
+        #print(poly_transformed)
 
         return poly_transformed
 
