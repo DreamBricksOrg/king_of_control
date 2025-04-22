@@ -11,3 +11,11 @@ HEXAGONS_SVG_OFFSET = (-75.0, 150.0)
 
 YOLO_MODEL_HEXAGON = r"static\models\yolo11m_hexagon.pt"
 YOLO_MODEL_BALL = r"static\models\yolo11m.pt"
+
+# game parameters
+MAX_TIME = 30    # in seconds
+TARGET_PATH_SIZE = 9
+TIME_SCORE = 100   # points per second
+HEX_CORRECT_SCORE = 500
+HEX_WRONG_SCORE = -1000
+

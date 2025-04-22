@@ -6,18 +6,21 @@ from yolo_object_detector import YoloObjectDetector
 from dual_camera import DualCamera
 import time
 from cv2_utils import stack_frames_vertically, draw_cross
+from hex_graph import HexGraph
 
 
 class KingOfControl:
     def __init__(self):
+        print("Init Arduino")
+        self.board = HexagonsBoard(port=param.ARDUINO_COM_PORT, baudrate=param.ARDUINO_BAUD_RATE)
+
         print("Init cameras")
         self.cameras = DualCamera(cam1_id=param.CAMERA1_ID, cam2_id=param.CAMERA2_ID,
                                   res1=param.CAMERA_RESOLUTION, res2=param.CAMERA_RESOLUTION)
-        print("Init Arduino")
-        self.board = HexagonsBoard(port=param.ARDUINO_COM_PORT, baudrate=param.ARDUINO_BAUD_RATE)
         print("Init Board Model")
         self.hex_model_cam1 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=(0, param.CAMERA_RESOLUTION[1]))
         self.hex_model_cam2 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=param.CAMERA_RESOLUTION)
+        self.graph = HexGraph()
 
     def camera_setup(self):
         final_width = 640
@@ -32,49 +35,135 @@ class KingOfControl:
         self.hex_model_cam1.set_calibration_points(floor_quad1)
         self.hex_model_cam2.set_calibration_points(floor_quad2)
 
+    def game(self):
+        white = (255, 255, 255)
+        red = (255, 0, 0)
+        green = (0, 255, 0)
+        ball_detector = YoloObjectDetector(class_id=32, model_path=param.YOLO_MODEL_BALL)
+
+        paths = [self.graph.create_random_path_target_size(0, param.TARGET_PATH_SIZE),
+                 self.graph.create_random_path_target_size(1, param.TARGET_PATH_SIZE)]
+        chosen_path = 0
+
+        brightness = 0
+        direction = 20
+        self.board.clear()
+        while True:
+            # update LEDs of starting hexagons
+            brightness += direction
+            if brightness >= 255:
+                brightness = 255
+                direction = -direction
+            elif brightness <= 0:
+                brightness = 0
+                direction = -direction
+
+            self.board.set_hexagon(0, 0, (brightness, brightness, brightness))
+            self.board.set_hexagon(1, 0, (brightness, brightness, brightness))
+
+            hex, frame1, frame2 = self.get_hex_under_ball(ball_detector)
+
+            composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
+            cv2.imshow("game", composed_frame)
+
+            # put the ball in one the starting hexagons
+            if hex and hex[1] == 0:
+                chosen_path = paths[hex[0]]
+                break
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                cv2.destroyAllWindows()
+                exit(0)
+
+        #shows path
+        self.board.clear()
+        for node in chosen_path:
+            self.board.set_hexagon(*node, white)
+
+        start_time = time.time()
+        path = set(chosen_path)
+        correct = set()
+        wrong = set()
+        while True:
+            playing_time = time.time() - start_time
+            if playing_time > param.MAX_TIME:
+                break
+
+            hex, frame1, frame2 = self.get_hex_under_ball(ball_detector)
+
+            if hex in path and hex not in correct:
+                self.board.set_hexagon(*hex, green)
+                correct.add(hex)
+                print(f"Score: {self.calculate_score(len(correct), len(wrong), 0.0)}")
+
+            if hex is not None and hex not in path and hex not in wrong:
+                self.board.set_hexagon(*hex, red)
+                wrong.add(hex)
+
+            composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
+            cv2.imshow("game", composed_frame)
+
+            if hex and hex[1] == 7:
+                break
+
+        playing_time = min(time.time() - start_time, param.MAX_TIME)
+        time_left = param.MAX_TIME - playing_time
+        print(f"Score: {self.calculate_score(len(correct), len(wrong), time_left)}")
+
+    @staticmethod
+    def calculate_score(num_correct, num_wrong, time_left):
+        return time_left * param.TIME_SCORE + \
+            num_correct * param.HEX_CORRECT_SCORE + \
+            num_wrong * param.HEX_WRONG_SCORE
+
+    def get_hex_under_ball(self, ball_detector, update_frames=True):
+        frame1, frame2 = self.cameras.get_frames()
+
+        bbox1 = ball_detector.detect_best(frame1)
+
+        hex = None
+        if bbox1 is not None:
+            idx, enabled_polygon = self.hex_model_cam1.get_polygon_under_ball(bbox1)
+            if enabled_polygon:
+                hex = self.hex_model_cam1.hex_coordinates[idx]
+                hexagon = self.hex_model_cam1.pers_polygons[idx]
+
+                if update_frames:
+                    label = "Ball"
+                    x1, y1, x2, y2 = bbox1
+                    cv2.rectangle(frame1, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+                    cv2.putText(frame1, label, (int(x1), int(y1) - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
+                    self.hex_model_cam1.draw_hexagons(frame1, color=(100, 100, 100))
+                    self.hex_model_cam1.draw_polylines(frame1, hexagon, color=(0, 255, 255))
+                    # hex = self.hex_model_cam1.get_hex_under_ball(bbox1)
+        else:
+            bbox2 = ball_detector.detect_best(frame2)
+            if bbox2 is not None:
+                idx, enabled_polygon = self.hex_model_cam2.get_polygon_under_ball(bbox2)
+                if enabled_polygon:
+                    hex = self.hex_model_cam2.hex_coordinates[idx]
+                    hexagon = self.hex_model_cam2.pers_polygons[idx]
+
+                    if update_frames:
+                        label = "Ball"
+                        x1, y1, x2, y2 = bbox2
+                        cv2.rectangle(frame2, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+                        cv2.putText(frame2, label, (int(x1), int(y1) - 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
+                        self.hex_model_cam2.draw_hexagons(frame2, color=(100, 100, 100))
+                        self.hex_model_cam2.draw_polylines(frame2, hexagon, color=(0, 255, 255))
+                        # hex = self.hex_model_cam2.get_hex_under_ball(bbox2)
+
+        return hex, frame1, frame2
+
     def track_ball(self):
         ball_detector = YoloObjectDetector(class_id=32, model_path=param.YOLO_MODEL_BALL)
         last_hex = None
         while True:
-            frame1, frame2 = self.cameras.get_frames()
-
-            bbox1 = ball_detector.detect_best(frame1)
-
-            hex = None
-            if bbox1 is not None:
-                idx, enabled_polygon = self.hex_model_cam1.get_polygon_under_ball(bbox1)
-                if enabled_polygon:
-                    hex = self.hex_model_cam1.hex_coordinates[idx]
-                    hexagon = self.hex_model_cam1.pers_polygons[idx]
-
-                    if True:
-                        label = "Ball"
-                        x1, y1, x2, y2 = bbox1
-                        cv2.rectangle(frame1, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
-                        cv2.putText(frame1, label, (int(x1), int(y1) - 10),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-
-                    self.hex_model_cam1.draw_hexagons(frame1, color=(100, 100, 100))
-                    self.hex_model_cam1.draw_polylines(frame1, hexagon, color=(0, 255, 255))
-                    #hex = self.hex_model_cam1.get_hex_under_ball(bbox1)
-            else:
-                bbox2 = ball_detector.detect_best(frame2)
-                if bbox2 is not None:
-                    idx, enabled_polygon = self.hex_model_cam2.get_polygon_under_ball(bbox2)
-                    if enabled_polygon:
-                        hex = self.hex_model_cam2.hex_coordinates[idx]
-                        hexagon = self.hex_model_cam2.pers_polygons[idx]
-
-                        if True:
-                            label = "Ball"
-                            x1, y1, x2, y2 = bbox2
-                            cv2.rectangle(frame2, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
-                            cv2.putText(frame2, label, (int(x1), int(y1) - 10),
-                                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-
-                        self.hex_model_cam2.draw_hexagons(frame2, color=(100, 100, 100))
-                        self.hex_model_cam2.draw_polylines(frame2, hexagon, color=(0, 255, 255))
-                        #hex = self.hex_model_cam2.get_hex_under_ball(bbox2)
+            hex, frame1, frame2 = self.get_hex_under_ball(ball_detector)
 
             if hex != last_hex:
                 if last_hex is not None:
@@ -195,8 +284,16 @@ class KingOfControl:
 
 if __name__ == "__main__":
     koc = KingOfControl();
-    #koc.camera_setup()
+    koc.camera_setup()
     koc.calibration()
     #koc.calibration_debug()
     #koc.debug_hex_led_mapping()
-    koc.track_ball()
+    #koc.track_ball()
+    while True:
+        koc.game()
+        start_time = time.time()
+        while time.time() - start_time < 5:
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                cv2.destroyAllWindows()
+                exit(0)
+
