@@ -45,8 +45,9 @@ class KingOfControl:
                  self.graph.create_random_path_target_size(1, param.TARGET_PATH_SIZE)]
         chosen_path = 0
 
+        # waits for the player to put the ball on one of the first hexagons
         brightness = 0
-        direction = 20
+        direction = 10
         self.board.clear()
         while True:
             # update LEDs of starting hexagons
@@ -75,11 +76,12 @@ class KingOfControl:
                 cv2.destroyAllWindows()
                 exit(0)
 
-        #shows path
+        # shows the path
         self.board.clear()
         for node in chosen_path:
             self.board.set_hexagon(*node, white)
 
+        # game starts
         start_time = time.time()
         path = set(chosen_path)
         correct = set()
@@ -99,6 +101,7 @@ class KingOfControl:
             if hex is not None and hex not in path and hex not in wrong:
                 self.board.set_hexagon(*hex, red)
                 wrong.add(hex)
+                print(f"Score: {self.calculate_score(len(correct), len(wrong), 0.0)}")
 
             composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
             cv2.imshow("game", composed_frame)
