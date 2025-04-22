@@ -20,9 +20,10 @@ if __name__ == "__main__":
 
     print("Sending data...")
     for row in range(8):
-        for col in range(3):
+        num_cols = 3 if row % 2 else 2
+        for col in range(num_cols):
             sender.set_hexagon(col, row, (255, 255, 255))
             time.sleep(0.2)
 
-    time.sleep(1)
+    time.sleep(20)
     sender.clear()
