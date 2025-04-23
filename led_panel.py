@@ -10,9 +10,9 @@ class LedPanel:
     def __init__(self,
                  state_play_duration=120,
                  state_score_duration=5,
-                 window_size=(600, 400),
+                 window_size=(1536, 256),
                  font_path="fonts/DS-DIGI.TTF",
-                 font_size=132,
+                 font_size=160,
                  text_color=(255, 255, 255),
                  cta_video_path='video.MP4',
                  background_image_path='images/background.png'):
@@ -69,7 +69,6 @@ class LedPanel:
 
         draw.text(position, text, font=font, fill=color)
 
-        # Converter de volta para BGR
         image_bgr = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
         return image_bgr
 
@@ -97,7 +96,7 @@ class LedPanel:
             self.current_state = 'SCORE'
             return
 
-        img = self.display_text_centered(img, text, self.FONT_SIZE,offset=(-100,0))
+        img = self.display_text_centered(img, text, self.FONT_SIZE,offset=(-150,-15))
         cv2.imshow("App", img)
 
     def show_score_screen(self):
@@ -109,9 +108,9 @@ class LedPanel:
             self.current_state = 'CTA'
             return
 
-        img = self.display_text_centered(img, text, self.FONT_SIZE,offset=(-100,0))
-        img = self.display_text_centered(img, "SCORE:", 24,offset=(-120,-80))
-        img = self.display_text_centered(img, "PTS", 24,offset=(20,60))
+        img = self.display_text_centered(img, "SCORE:", 24,offset=(-150,-60))
+        img = self.display_text_centered(img, "PTS", 24,offset=(0,50))
+        img = self.display_text_centered(img, text, self.FONT_SIZE,offset=(-150,-15))
         cv2.imshow("App", img)
 
     def display_text_centered(self, img, text, font_size, offset=(0, 0)):
@@ -128,6 +127,7 @@ class LedPanel:
         bbox = draw.textbbox((0, 0), text, font=font)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
+
 
         offset_x, offset_y = offset
         text_x = (img.shape[1] - text_width) // 2 + offset_x
