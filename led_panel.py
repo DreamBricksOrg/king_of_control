@@ -113,7 +113,7 @@ class LedPanel(threading.Thread):
         text = f"{self.score_value}"
 
         img = self.display_text_centered(img, "SCORE:", 24, offset=(-150, -60))
-        img = self.display_text_centered(img, "PTS", 24, offset=(0, 50))
+        img = self.display_text_centered(img, "PTS", 24, offset=(60, 50))
         img = self.display_text_centered(img, text, self.FONT_SIZE, offset=(-150, -15))
         cv2.imshow("App", img)
 
@@ -215,19 +215,19 @@ if __name__ == "__main__":
         print(key)
         if key == '0':
             ledPanel.set_state('BLANK')
-        if key == '1':
+        elif key == '1':
             ledPanel.set_state('CTA')
         elif key == '2':
             ledPanel.set_state('PLAY')
         elif key == '3':
             ledPanel.set_state('SCORE')
-            ledPanel.set_score_value(random.randint(0, 999))
+            ledPanel.set_score_value(random.randint(0, 9999))
         elif key == 'q':
             ledPanel._running = False
             break
 
         time.sleep(5)
-        key_idx = (key_idx+1) % 3
+        key_idx = (key_idx+1)
         #ledPanel.show_state_on_screen()
 
 
