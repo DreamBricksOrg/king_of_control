@@ -7,7 +7,7 @@ from dual_camera import DualCamera
 import time
 from cv2_utils import stack_frames_vertically, draw_cross
 from hex_graph import HexGraph
-
+from led_panel import LedPanel
 
 class KingOfControl:
     def __init__(self):
@@ -21,6 +21,7 @@ class KingOfControl:
         self.hex_model_cam1 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=(0, param.CAMERA_RESOLUTION[1]))
         self.hex_model_cam2 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=param.CAMERA_RESOLUTION)
         self.graph = HexGraph()
+        self.led_panel = LedPanel()
 
     def camera_setup(self):
         final_width = 640
@@ -93,12 +94,16 @@ class KingOfControl:
 
             hex, frame1, frame2 = self.get_hex_under_ball(ball_detector)
 
+            # if goal
+            if hex and hex[1] == 8:
+                break
+
             if hex in path and hex not in correct:
                 self.board.set_hexagon(*hex, green)
                 correct.add(hex)
                 print(f"Score: {self.calculate_score(len(correct), len(wrong), 0.0)}")
 
-            if hex is not None and hex not in path and hex not in wrong:
+            if hex and hex not in path and hex not in wrong:
                 self.board.set_hexagon(*hex, red)
                 wrong.add(hex)
                 print(f"Score: {self.calculate_score(len(correct), len(wrong), 0.0)}")
@@ -106,8 +111,8 @@ class KingOfControl:
             composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
             cv2.imshow("game", composed_frame)
 
-            if hex and hex[1] == 7:
-                break
+            #if hex and hex[1] == 7:
+            #    break
 
         playing_time = min(time.time() - start_time, param.MAX_TIME)
         time_left = param.MAX_TIME - playing_time

@@ -214,6 +214,9 @@ class HexBoardModel:
             for col in range(num_cols):
                 result.append((col, row))
 
+        # add the goal
+        result.append((0, 8))
+
         return result
 
     @staticmethod
