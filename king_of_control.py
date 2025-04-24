@@ -21,7 +21,7 @@ class KingOfControl:
         self.hex_model_cam1 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=(0, param.CAMERA_RESOLUTION[1]))
         self.hex_model_cam2 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=param.CAMERA_RESOLUTION)
         self.graph = HexGraph()
-        self.led_panel = LedPanel()
+        self.led_panel = LedPanel(state_play_duration=param.MAX_TIME)
 
     def camera_setup(self):
         final_width = 640
@@ -30,6 +30,7 @@ class KingOfControl:
         cv2.destroyAllWindows()
 
     def calibration(self):
+        self.led_panel.set_state('BLANK')
         hex_detector = YoloObjectDetector(class_id=0, model_path=param.YOLO_MODEL_HEXAGON)
         floor_quad1, floor_quad2 = self.get_calibration_points(hex_detector)
 
@@ -50,6 +51,7 @@ class KingOfControl:
         brightness = 0
         direction = 10
         self.board.clear()
+        self.led_panel.set_state('CTA')
         while True:
             # update LEDs of starting hexagons
             brightness += direction
@@ -82,8 +84,10 @@ class KingOfControl:
         for node in chosen_path:
             self.board.set_hexagon(*node, white)
 
+
         # game starts
         start_time = time.time()
+        self.led_panel.set_state('PLAY')
         path = set(chosen_path)
         correct = set()
         wrong = set()
@@ -116,7 +120,10 @@ class KingOfControl:
 
         playing_time = min(time.time() - start_time, param.MAX_TIME)
         time_left = param.MAX_TIME - playing_time
-        print(f"Score: {self.calculate_score(len(correct), len(wrong), time_left)}")
+        score = self.calculate_score(len(correct), len(wrong), time_left)
+        print(f"Score: {score}")
+        self.led_panel.set_score_value(int(score))
+        self.led_panel.set_state('SCORE')
 
     @staticmethod
     def calculate_score(num_correct, num_wrong, time_left):

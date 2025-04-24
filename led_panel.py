@@ -10,7 +10,6 @@ import threading
 class LedPanel(threading.Thread):
     def __init__(self,
                  state_play_duration=120,
-                 state_score_duration=5,
                  window_size=(1536, 256),
                  font_path="fonts/DS-DIGI.TTF",
                  font_size=160,
@@ -22,7 +21,6 @@ class LedPanel(threading.Thread):
         self.lock = threading.Lock()
 
         self.STATE_PLAY_DURATION = state_play_duration
-        self.STATE_SCORE_DURATION = state_score_duration
         self.WINDOW_SIZE = window_size
         self.FONT_PATH = font_path
         self.FONT_SIZE = font_size
@@ -112,12 +110,7 @@ class LedPanel(threading.Thread):
 
     def show_score_screen(self):
         img = self.background_image.copy()
-        elapsed = time.time() - self.score_start_time
         text = f"{self.score_value}"
-
-        if elapsed >= self.STATE_SCORE_DURATION:
-            self.current_state = 'CTA'
-            return
 
         img = self.display_text_centered(img, "SCORE:", 24, offset=(-150, -60))
         img = self.display_text_centered(img, "PTS", 24, offset=(0, 50))
