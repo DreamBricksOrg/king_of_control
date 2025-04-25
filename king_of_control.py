@@ -8,9 +8,35 @@ import time
 from cv2_utils import stack_frames_vertically, draw_cross
 from hex_graph import HexGraph
 from led_panel import LedPanel
+from game_status import GameStatus
+
 
 class KingOfControl:
+    class GameVariables:
+        def __init__(self, graph):
+            self.graph = graph
+            self.ball_detector = YoloObjectDetector(class_id=32, model_path=param.YOLO_MODEL_BALL)
+            self.paths = self.choose_new_paths()
+            self.start_brightness = 128
+            self.brightness_direction = 10
+            self.change_status_time = time.time()
+            self.start_time = time.time()
+            self.playing_time = 0
+            self.chosen_path = None
+            self.correct = set()
+            self.wrong = set()
+            self.current_status = GameStatus.BLANK
+
+        def choose_new_paths(self):
+            self.paths = [self.graph.create_random_path_target_size(0, param.TARGET_PATH_SIZE),
+                          self.graph.create_random_path_target_size(1, param.TARGET_PATH_SIZE)]
+            return self.paths
+
     def __init__(self):
+        self.RED = (255, 0, 0)
+        self.GREEN = (0, 255, 0)
+        self.WHITE = (255, 255, 255)
+
         print("Init Arduino")
         self.board = HexagonsBoard(port=param.ARDUINO_COM_PORT, baudrate=param.ARDUINO_BAUD_RATE)
 
@@ -18,10 +44,24 @@ class KingOfControl:
         self.cameras = DualCamera(cam1_id=param.CAMERA1_ID, cam2_id=param.CAMERA2_ID,
                                   res1=param.CAMERA_RESOLUTION, res2=param.CAMERA_RESOLUTION)
         print("Init Board Model")
-        self.hex_model_cam1 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=(0, param.CAMERA_RESOLUTION[1]))
-        self.hex_model_cam2 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=param.CAMERA_RESOLUTION)
+        self.hex_model_cam2 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=(0, param.CAMERA_RESOLUTION[1]))
+        self.hex_model_cam1 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=param.CAMERA_RESOLUTION)
         self.graph = HexGraph()
-        self.led_panel = LedPanel(state_play_duration=param.MAX_TIME)
+        self.led_panel = LedPanel(
+            state_play_duration=param.MAX_TIME,
+            countdown_video_path=param.COUNTDOWN_VIDEO,
+            game_video_path=param.GAME_VIDEO,
+            goal_video_path=param.GOAL_VIDEO,
+            cta_image=param.CTA_IMAGE,
+            offside_image=param.OFFSIDE_IMAGE,
+            endgame_image=param.END_IMAGE,
+            game_audio=param.GAME_AUDIO,
+            cta_audio=param.CTA_AUDIO,
+            goal_audio=param.GOAL_AUDIO,
+            end_audio=param.END_AUDIO
+        )
+
+        self.game_vars = self.GameVariables(self.graph)
 
     def camera_setup(self):
         final_width = 640
@@ -30,14 +70,165 @@ class KingOfControl:
         cv2.destroyAllWindows()
 
     def calibration(self):
-        self.led_panel.set_state('BLANK')
+        #self.led_panel.set_state(GameStatus.BLANK)
         hex_detector = YoloObjectDetector(class_id=0, model_path=param.YOLO_MODEL_HEXAGON)
         floor_quad1, floor_quad2 = self.get_calibration_points(hex_detector)
 
         self.hex_model_cam1.set_calibration_points(floor_quad1)
         self.hex_model_cam2.set_calibration_points(floor_quad2)
 
+    def run_cta(self):
+        # waits for the player to put the ball on one of the first hexagons
+
+        # update LEDs of starting hexagons
+        self.game_vars.start_brightness += self.game_vars.brightness_direction
+        if self.game_vars.start_brightness >= 255:
+            self.game_vars.start_brightness = 255
+            self.game_vars.brightness_direction = -self.game_vars.brightness_direction
+        elif self.game_vars.start_brightness <= 0:
+            self.game_vars.start_brightness = 0
+            self.game_vars.brightness_direction = -self.game_vars.brightness_direction
+
+        hex_color = (self.game_vars.start_brightness, self.game_vars.start_brightness, self.game_vars.start_brightness)
+        self.board.set_hexagon(0, 0, hex_color)
+        self.board.set_hexagon(1, 0, hex_color)
+
+        hex, frame1, frame2 = self.get_hex_under_ball(self.game_vars.ball_detector)
+
+        composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
+        cv2.imshow("game", composed_frame)
+
+        # put the ball in one the starting hexagons
+        if hex and hex[1] == 0:
+            self.game_vars.chosen_path = self.game_vars.paths[hex[0]]
+            return GameStatus.COUNTDOWN
+
+        return GameStatus.CTA
+
+    def run_countdown(self):
+        duration = time.time() - self.game_vars.change_status_time
+        if duration >= param.COUNTDOWN_TIME:
+            return GameStatus.GAME
+
+        return GameStatus.COUNTDOWN
+
+    def run_goal(self):
+        duration = time.time() - self.game_vars.change_status_time
+        if duration >= param.GOAL_TIME:
+            return GameStatus.END
+
+        return GameStatus.GOAL
+
+    def run_offside(self):
+        duration = time.time() - self.game_vars.change_status_time
+        if duration >= param.OFFSIDE_TIME:
+            return GameStatus.END
+
+        return GameStatus.OFFSIDE
+
+    def run_end(self):
+        duration = time.time() - self.game_vars.change_status_time
+        if duration >= param.END_TIME:
+            return GameStatus.CTA
+
+        return GameStatus.END
+
+    def run_game(self):
+        print("Running Game")
+        self.game_vars.playing_time = time.time() - self.game_vars.start_time
+        if self.game_vars.playing_time >= param.MAX_TIME:
+            self.game_vars.playing_time = param.MAX_TIME
+            return GameStatus.END
+
+        hex, frame1, frame2 = self.get_hex_under_ball(self.game_vars.ball_detector)
+
+        # if goal
+        if hex and hex[1] == 8:
+            return GameStatus.GOAL
+
+        if hex in self.game_vars.chosen_path and hex not in self.game_vars.correct:
+            self.board.set_hexagon(*hex, self.GREEN)
+            self.game_vars.correct.add(hex)
+            print(f"Score: {self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong), 0.0)}")
+
+        if hex and hex not in self.game_vars.chosen_path and hex not in self.game_vars.wrong:
+            self.board.set_hexagon(*hex, self.RED)
+            self.game_vars.wrong.add(hex)
+            print(f"Score: {self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong), 0.0)}")
+            return GameStatus.OFFSIDE
+
+        composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
+        cv2.imshow("game", composed_frame)
+
+        return GameStatus.GAME
+
     def game(self):
+
+        self.led_panel.start()
+
+        self.game_vars.current_status = GameStatus.BLANK
+        next_status = GameStatus.CTA
+        while True:
+            if self.game_vars.current_status == GameStatus.CTA:
+                next_status = self.run_cta()
+            elif self.game_vars.current_status == GameStatus.COUNTDOWN:
+                next_status = self.run_countdown()
+            elif self.game_vars.current_status == GameStatus.GAME:
+                next_status = self.run_game()
+            elif self.game_vars.current_status == GameStatus.GOAL:
+                next_status = self.run_goal()
+            elif self.game_vars.current_status == GameStatus.OFFSIDE:
+                next_status = self.run_offside()
+            elif self.game_vars.current_status == GameStatus.END:
+                next_status = self.run_end()
+
+            if self.game_vars.current_status != next_status:
+                print(f"Status: {next_status}")
+                self.game_vars.current_status = next_status
+                self.game_vars.change_status_time = time.time()
+                self.led_panel.set_state(self.game_vars.current_status)
+
+                if self.game_vars.current_status == GameStatus.CTA:
+                    self.game_vars.start_brightness = 0
+                    self.game_vars.brightness_direction = 10
+                    self.game_vars.choose_new_paths()
+                    self.board.clear()
+
+                elif self.game_vars.current_status == GameStatus.COUNTDOWN:
+                    self.board.set_hexagon(*self.game_vars.chosen_path[0], self.GREEN)
+
+                elif self.game_vars.current_status == GameStatus.GAME:
+                    # shows the path
+                    self.board.clear()
+                    for i, node in enumerate(self.game_vars.chosen_path):
+                        if i > 0:
+                            self.board.set_hexagon(*node, self.WHITE)
+
+                    # game starts
+                    self.game_vars.start_time = time.time()
+                    self.game_vars.correct = set()
+                    self.game_vars.wrong = set()
+
+                elif self.game_vars.current_status == GameStatus.GOAL:
+                    pass
+
+                elif self.game_vars.current_status == GameStatus.OFFSIDE:
+                    pass
+
+                elif self.game_vars.current_status == GameStatus.END:
+                    pass
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                cv2.destroyAllWindows()
+                exit(0)
+
+        time_left = param.MAX_TIME - self.game_vars.playing_time
+        score = self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong), time_left)
+        print(f"Score: {score}")
+        self.led_panel.set_score_value(int(score))
+        #self.led_panel.set_state()
+
+    def game_db(self):
         white = (255, 255, 255)
         red = (255, 0, 0)
         green = (0, 255, 0)
@@ -51,7 +242,7 @@ class KingOfControl:
         brightness = 0
         direction = 10
         self.board.clear()
-        self.led_panel.set_state('CTA')
+        self.led_panel.set_state(GameStatus.CTA)
         while True:
             # update LEDs of starting hexagons
             brightness += direction
@@ -87,7 +278,7 @@ class KingOfControl:
 
         # game starts
         start_time = time.time()
-        self.led_panel.set_state('PLAY')
+        self.led_panel.set_state(GameStatus.GAME)
         path = set(chosen_path)
         correct = set()
         wrong = set()
@@ -123,7 +314,7 @@ class KingOfControl:
         score = self.calculate_score(len(correct), len(wrong), time_left)
         print(f"Score: {score}")
         self.led_panel.set_score_value(int(score))
-        self.led_panel.set_state('SCORE')
+        self.led_panel.set_state(GameStatus.END)
 
     @staticmethod
     def calculate_score(num_correct, num_wrong, time_left):
@@ -297,10 +488,10 @@ class KingOfControl:
                 break
 
 
-if __name__ == "__main__":
+if __name__ == "__main__0":
     koc = KingOfControl();
     koc.camera_setup()
-    koc.calibration()
+    #koc.calibration()
     #koc.calibration_debug()
     #koc.debug_hex_led_mapping()
     #koc.track_ball()
@@ -312,3 +503,9 @@ if __name__ == "__main__":
                 cv2.destroyAllWindows()
                 exit(0)
 
+if __name__ == "__main__":
+    koc = KingOfControl();
+    koc.camera_setup()
+    koc.calibration()
+    koc.calibration_debug()
+    koc.game()

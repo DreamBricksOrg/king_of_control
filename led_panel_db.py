@@ -5,7 +5,6 @@ import random
 from PIL import ImageFont, ImageDraw, Image
 from audio_player import AudioPlayer
 import threading
-from game_status import GameStatus
 
 
 class LedPanel(threading.Thread):
@@ -15,17 +14,7 @@ class LedPanel(threading.Thread):
                  font_path="fonts/DS-DIGI.TTF",
                  font_size=160,
                  text_color=(255, 255, 255),
-                 countdown_video_path=None,
-                 game_video_path=None,
-                 goal_video_path=None,
-                 cta_image=None,
-                 offside_image=None,
-                 endgame_image=None,
-                 game_audio=None,
-                 end_audio=None,
-                 cta_audio=None,
-                 goal_audio=None,
-
+                 cta_video_path='video.MP4',
                  background_image_path='images/background.png'):
 
         super().__init__()
@@ -37,32 +26,21 @@ class LedPanel(threading.Thread):
         self.FONT_SIZE = font_size
         self.TEXT_COLOR = text_color
 
-        self.current_state = GameStatus.BLANK
+        self.current_state = 'BLANK'
         self.last_state = None
         self._running = True
 
         # Recursos
+        self.cta_video_path = cta_video_path
+        self.cta_cap = cv2.VideoCapture(self.cta_video_path)
         self.background_image = self.load_background_image(background_image_path)
         self.black_image = self.create_black_image()
-
-        self.cta_image = self.load_background_image(cta_image)
-        self.offside_image = self.load_background_image(offside_image)
-        self.endgame_image = self.load_background_image(endgame_image)
-
-        self.countdown_cap=cv2.VideoCapture(countdown_video_path)
-        self.game_cap=cv2.VideoCapture(game_video_path)
-        self.goal_cap=cv2.VideoCapture(goal_video_path)
 
         self.audio_player = AudioPlayer()
 
         self.play_start_time = None
         self.score_start_time = None
         self.score_value = None
-
-        self.game_audio = game_audio
-        self.end_audio = end_audio
-        self.cta_audio = cta_audio
-        self.goal_audio = goal_audio
 
     def create_black_image(self):
         return np.full((self.WINDOW_SIZE[1], self.WINDOW_SIZE[0], 3), (0, 0, 0), dtype=np.uint8)
@@ -77,20 +55,6 @@ class LedPanel(threading.Thread):
         except Exception as e:
             print(f"Erro ao carregar imagem de fundo: {e}")
             return self.black_image
-
-    def play_video(self, cap):
-        if not cap.isOpened():
-            print("Erro ao abrir o vídeo")
-            self._running = False
-            return
-
-        ret, frame = cap.read()
-        if not ret:
-            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-            return
-
-        frame = cv2.resize(frame, self.WINDOW_SIZE)
-        cv2.imshow("App", frame)
 
     def format_time(self, seconds):
         minutes = seconds // 60
@@ -114,11 +78,35 @@ class LedPanel(threading.Thread):
         image_bgr = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
         return image_bgr
 
+    def show_cta_screen(self):
+        if not self.cta_cap.isOpened():
+            print("Erro ao abrir o vídeo CTA.")
+            self._running = False
+            return
+
+        ret, frame = self.cta_cap.read()
+        if not ret:
+            self.cta_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            return
+
+        frame = cv2.resize(frame, self.WINDOW_SIZE)
+        cv2.imshow("App", frame)
+
+    def show_play_screen(self):
+        img = self.background_image.copy()
+        elapsed = time.time() - self.play_start_time
+        remaining = max(0, self.STATE_PLAY_DURATION - int(elapsed))
+        text = f"{self.format_time(remaining)}"
+
+        if remaining == 0:
+            self.current_state = 'SCORE'
+            return
+
+        img = self.display_text_centered(img, text, self.FONT_SIZE, offset=(-150, -15))
+        cv2.imshow("App", img)
+
     def show_blank_screen(self):
         cv2.imshow("App", self.black_image)
-
-    def show_screen(self, image):
-        cv2.imshow("App", image)
 
     def show_score_screen(self):
         img = self.background_image.copy()
@@ -164,40 +152,42 @@ class LedPanel(threading.Thread):
                     print(f"run: {self.current_state}")
                     self.audio_player.stop_all()
 
-                    current_cap = None
-                    if self.current_state == GameStatus.CTA:
-                        self.audio_player.play_loop(self.cta_audio)
-                        self.show_screen(self.cta_image)
-
-                    elif self.current_state == GameStatus.COUNTDOWN:
-                        self.audio_player.play_once(self.game_audio)
-                        current_cap = self.countdown_cap
-                        current_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                    elif self.current_state == GameStatus.GAME:
-                        self.audio_player.play_once(self.game_audio)
-                        current_cap = self.game_cap
-                        current_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                    elif self.current_state == GameStatus.GOAL:
-                        self.audio_player.play_once(self.goal_audio)
-                        current_cap = self.goal_cap
-                        current_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                    elif self.current_state == GameStatus.OFFSIDE:
-                        self.audio_player.play_once(self.end_audio)
-                        self.show_screen(self.offside_image)
-                    elif self.current_state == GameStatus.END:
-                        self.audio_player.play_once(self.end_audio)
-                        self.show_screen(self.endgame_image)
-                    elif self.current_state == GameStatus.BLANK:
-                        self.show_blank_screen()
+                    if self.current_state == 'CTA':
+                        self.audio_player.play_loop("champions")
+                        self.cta_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    elif self.current_state == 'PLAY':
+                        self.audio_player.play_once("torcida")
+                        self.play_start_time = time.time()
+                    elif self.current_state == 'SCORE':
+                        self.audio_player.play_once("gol")
+                        self.score_start_time = time.time()
+                    elif self.current_state == 'BLANK':
+                        self.score_start_time = time.time()
 
                     self.last_state = self.current_state
 
-                if self.current_state in [GameStatus.COUNTDOWN, GameStatus.GAME, GameStatus.GOAL]:
-                    self.play_video(current_cap)
+                if self.current_state == 'CTA':
+                    self.show_cta_screen()
+                elif self.current_state == 'PLAY':
+                    self.show_play_screen()
+                elif self.current_state == 'SCORE':
+                    self.show_score_screen()
+                elif self.current_state == 'BLANK':
+                    self.show_blank_screen()
 
-            cv2.waitKey(30) & 0xFF
+                key = cv2.waitKey(30) & 0xFF
+                if key == ord('1'):
+                    ledPanel.set_state('CTA')
+                elif key == ord('2'):
+                    ledPanel.set_state('PLAY')
+                elif key == ord('3'):
+                    ledPanel.set_state('SCORE')
+                    ledPanel.set_score_value(random.randint(0, 999))
+                elif key == ord('q'):
+                    ledPanel._running = False
+                    break
 
-        self.current_cap.release()
+        self.cta_cap.release()
         cv2.destroyAllWindows()
 
     def set_state(self, state):
@@ -210,27 +200,13 @@ class LedPanel(threading.Thread):
 
 
 if __name__ == "__main__":
-    import parameters as param
-
-    led_panel = LedPanel(
-        state_play_duration=param.MAX_TIME,
-        countdown_video_path=param.COUNTDOWN_VIDEO,
-        game_video_path=param.GAME_VIDEO,
-        goal_video_path=param.GOAL_VIDEO,
-        cta_image=param.CTA_IMAGE,
-        offside_image=param.OFFSIDE_IMAGE,
-        endgame_image=param.END_IMAGE,
-        game_audio=param.GAME_AUDIO,
-        cta_audio=param.CTA_AUDIO,
-        goal_audio=param.GOAL_AUDIO,
-        end_audio=param.END_AUDIO
-    )
-    led_panel.start()
+    ledPanel = LedPanel()
+    ledPanel.start()
 
     #exit(1)
     print('change state')
 
-    keys = ['0', '1', '2', '3', '4', '5', '6']
+    keys = ['0', '1', '2', '3']
 
     key_idx = 0
     while True:
@@ -238,26 +214,20 @@ if __name__ == "__main__":
         key = keys[key_idx]
         print(key)
         if key == '0':
-            led_panel.set_state(GameStatus.BLANK)
+            ledPanel.set_state('BLANK')
         elif key == '1':
-            led_panel.set_state(GameStatus.CTA)
+            ledPanel.set_state('CTA')
         elif key == '2':
-            led_panel.set_state(GameStatus.COUNTDOWN)
+            ledPanel.set_state('PLAY')
         elif key == '3':
-            led_panel.set_state(GameStatus.GAME)
-            #ledPanel.set_score_value(random.randint(0, 9999))
-        elif key == '4':
-            led_panel.set_state(GameStatus.GOAL)
-        elif key == '5':
-            led_panel.set_state(GameStatus.OFFSIDE)
-        elif key == '6':
-            led_panel.set_state(GameStatus.END)
+            ledPanel.set_state('SCORE')
+            ledPanel.set_score_value(random.randint(0, 9999))
         elif key == 'q':
-            led_panel._running = False
+            ledPanel._running = False
             break
 
         time.sleep(5)
-        key_idx = (key_idx+1) % len(keys)
+        key_idx = (key_idx+1)
         #ledPanel.show_state_on_screen()
 
 

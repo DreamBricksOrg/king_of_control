@@ -15,15 +15,32 @@ class HexagonsBoard:
 # Example Usage
 if __name__ == "__main__":
     import time
-    port = "COM16"
+    import parameters as param
+    port = param.ARDUINO_COM_PORT
     sender = HexagonsBoard(port=port, baudrate=115200)  # Replace with your actual port, e.g., "/dev/ttyUSB0" on Linux
 
     print("Sending data...")
-    for row in range(8):
-        num_cols = 3 if row % 2 else 2
-        for col in range(num_cols):
-            sender.set_hexagon(col, row, (255, 255, 255))
-            time.sleep(0.2)
+    while True:
+        for row in range(8):
+            num_cols = 3 if row % 2 else 2
+            for col in range(num_cols):
+                sender.set_hexagon(col, row, (255, 0, 0))
+                time.sleep(0.2)
+        for row in range(8):
+            num_cols = 3 if row % 2 else 2
+            for col in range(num_cols):
+                sender.set_hexagon(col, row, (0, 255, 0))
+                time.sleep(0.2)
+        for row in range(8):
+            num_cols = 3 if row % 2 else 2
+            for col in range(num_cols):
+                sender.set_hexagon(col, row, (0, 0, 255))
+                time.sleep(0.2)
+        for row in range(8):
+            num_cols = 3 if row % 2 else 2
+            for col in range(num_cols):
+                sender.set_hexagon(col, row, (255, 255, 255))
+                time.sleep(0.2)
 
-    time.sleep(20)
-    sender.clear()
+        time.sleep(1)
+        sender.clear()

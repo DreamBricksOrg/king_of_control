@@ -3,6 +3,7 @@ from cv2_utils import stack_frames_vertically
 import threading
 from camera_initializer import CameraInitializer
 
+
 class DualCamera:
     def __init__(self, cam1_id, cam2_id, res1=(640, 480), res2=(640, 480)):
         #print(f"start camera {cam1_id}")
