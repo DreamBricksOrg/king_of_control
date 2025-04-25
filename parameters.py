@@ -10,11 +10,12 @@ HEXAGONS_SVG_FILE = r"static\assets\hexagons.svg"
 HEXAGONS_SVG_OFFSET = (-75.0, 150.0)
 
 YOLO_MODEL_HEXAGON = r"static\models\yolo11m_hexagon.pt"
-YOLO_MODEL_BALL = r"static\models\yolo11m.pt"
+xYOLO_MODEL_BALL = r"static\models\yolo11m.pt"
+YOLO_MODEL_BALL = r"yolo11_custom_ball.pt"
 
 # game parameters
-MAX_TIME = 60    # in seconds
-COUNTDOWN_TIME = 3 # in seconds
+MAX_TIME = 45    # in seconds
+COUNTDOWN_TIME = 4 # in seconds
 END_TIME = 5
 GOAL_TIME = 8
 OFFSIDE_TIME = 3
@@ -25,9 +26,11 @@ HEX_CORRECT_SCORE = 500
 HEX_WRONG_SCORE = -1000
 
 GAME_AUDIO = "torcida"
-END_AUDIO = "apito"
+END_AUDIO = "3apitos"
 CTA_AUDIO = "champions"
 GOAL_AUDIO = "gol"
+OFFSIDE_AUDIO = "1apito"
+COUNTDOWN_AUDIO = "countdown"
 
 OFFSIDE_IMAGE = r"images\offside.png"
 CTA_IMAGE = r"images\cta.png"

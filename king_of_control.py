@@ -44,8 +44,8 @@ class KingOfControl:
         self.cameras = DualCamera(cam1_id=param.CAMERA1_ID, cam2_id=param.CAMERA2_ID,
                                   res1=param.CAMERA_RESOLUTION, res2=param.CAMERA_RESOLUTION)
         print("Init Board Model")
-        self.hex_model_cam2 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=(0, param.CAMERA_RESOLUTION[1]))
-        self.hex_model_cam1 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=param.CAMERA_RESOLUTION)
+        self.hex_model_cam1 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=(0, param.CAMERA_RESOLUTION[1]))
+        self.hex_model_cam2 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=param.CAMERA_RESOLUTION)
         self.graph = HexGraph()
         self.led_panel = LedPanel(
             state_play_duration=param.MAX_TIME,
@@ -58,7 +58,9 @@ class KingOfControl:
             game_audio=param.GAME_AUDIO,
             cta_audio=param.CTA_AUDIO,
             goal_audio=param.GOAL_AUDIO,
-            end_audio=param.END_AUDIO
+            end_audio=param.END_AUDIO,
+            offside_audio=param.OFFSIDE_AUDIO,
+            countdown_audio=param.COUNTDOWN_AUDIO
         )
 
         self.game_vars = self.GameVariables(self.graph)
@@ -78,6 +80,7 @@ class KingOfControl:
         self.hex_model_cam2.set_calibration_points(floor_quad2)
 
     def run_cta(self):
+        print("Running CTA")
         # waits for the player to put the ball on one of the first hexagons
 
         # update LEDs of starting hexagons
@@ -134,8 +137,8 @@ class KingOfControl:
         return GameStatus.END
 
     def run_game(self):
-        print("Running Game")
         self.game_vars.playing_time = time.time() - self.game_vars.start_time
+        print(f"Running Game: {self.game_vars.playing_time}")
         if self.game_vars.playing_time >= param.MAX_TIME:
             self.game_vars.playing_time = param.MAX_TIME
             return GameStatus.END
@@ -232,7 +235,7 @@ class KingOfControl:
         white = (255, 255, 255)
         red = (255, 0, 0)
         green = (0, 255, 0)
-        ball_detector = YoloObjectDetector(class_id=32, model_path=param.YOLO_MODEL_BALL)
+        ball_detector = self.ball_detector #YoloObjectDetector(class_id=32, model_path=param.YOLO_MODEL_BALL)
 
         paths = [self.graph.create_random_path_target_size(0, param.TARGET_PATH_SIZE),
                  self.graph.create_random_path_target_size(1, param.TARGET_PATH_SIZE)]

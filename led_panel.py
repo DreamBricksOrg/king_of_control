@@ -25,6 +25,8 @@ class LedPanel(threading.Thread):
                  end_audio=None,
                  cta_audio=None,
                  goal_audio=None,
+                 offside_audio=None,
+                 countdown_audio=None,
 
                  background_image_path='images/background.png'):
 
@@ -49,9 +51,11 @@ class LedPanel(threading.Thread):
         self.offside_image = self.load_background_image(offside_image)
         self.endgame_image = self.load_background_image(endgame_image)
 
-        self.countdown_cap=cv2.VideoCapture(countdown_video_path)
-        self.game_cap=cv2.VideoCapture(game_video_path)
-        self.goal_cap=cv2.VideoCapture(goal_video_path)
+        self.countdown_cap = cv2.VideoCapture(countdown_video_path)
+        self.game_cap = cv2.VideoCapture(game_video_path)
+        self.goal_cap = cv2.VideoCapture(goal_video_path)
+
+        self.game_cap_delay = 1.0 / self.game_cap.get(cv2.CAP_PROP_FPS)
 
         self.audio_player = AudioPlayer()
 
@@ -63,6 +67,8 @@ class LedPanel(threading.Thread):
         self.end_audio = end_audio
         self.cta_audio = cta_audio
         self.goal_audio = goal_audio
+        self.offside_audio = offside_audio
+        self.countdown_audio = countdown_audio
 
     def create_black_image(self):
         return np.full((self.WINDOW_SIZE[1], self.WINDOW_SIZE[0], 3), (0, 0, 0), dtype=np.uint8)
@@ -170,29 +176,35 @@ class LedPanel(threading.Thread):
                         self.show_screen(self.cta_image)
 
                     elif self.current_state == GameStatus.COUNTDOWN:
-                        self.audio_player.play_once(self.game_audio)
+                        self.audio_player.play_once(self.countdown_audio)
                         current_cap = self.countdown_cap
                         current_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
                     elif self.current_state == GameStatus.GAME:
                         self.audio_player.play_once(self.game_audio)
                         current_cap = self.game_cap
                         current_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                        #self.show_screen(self.cta_image)
+
                     elif self.current_state == GameStatus.GOAL:
                         self.audio_player.play_once(self.goal_audio)
                         current_cap = self.goal_cap
                         current_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
                     elif self.current_state == GameStatus.OFFSIDE:
-                        self.audio_player.play_once(self.end_audio)
+                        self.audio_player.play_once(self.offside_audio)
                         self.show_screen(self.offside_image)
+
                     elif self.current_state == GameStatus.END:
                         self.audio_player.play_once(self.end_audio)
+
                         self.show_screen(self.endgame_image)
                     elif self.current_state == GameStatus.BLANK:
                         self.show_blank_screen()
 
                     self.last_state = self.current_state
 
-                if self.current_state in [GameStatus.COUNTDOWN, GameStatus.GAME, GameStatus.GOAL]:
+                if self.current_state in [GameStatus.COUNTDOWN, GameStatus.GOAL, GameStatus.GAME]: #
                     self.play_video(current_cap)
 
             cv2.waitKey(30) & 0xFF
