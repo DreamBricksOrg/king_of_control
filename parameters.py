@@ -3,7 +3,7 @@ CAMERA1_ID = 0
 CAMERA2_ID = 1
 CAMERA_RESOLUTION = (640, 360)
 
-ARDUINO_COM_PORT = "COM13"
+ARDUINO_COM_PORT = "COM3"
 ARDUINO_BAUD_RATE = 115200
 
 HEXAGONS_SVG_FILE = r"static\assets\hexagons.svg"
@@ -11,7 +11,9 @@ HEXAGONS_SVG_OFFSET = (-75.0, 150.0)
 
 YOLO_MODEL_HEXAGON = r"static\models\yolo11m_hexagon.pt"
 xYOLO_MODEL_BALL = r"static\models\yolo11m.pt"
-YOLO_MODEL_BALL = r"yolo11_custom_ball.pt"
+YOLO_MODEL_BALL = r"static\models\custom_ball.pt"
+xYOLO_MODEL_BALL_ID = 32
+YOLO_MODEL_BALL_ID = 0
 
 # game parameters
 MAX_TIME = 45    # in seconds
