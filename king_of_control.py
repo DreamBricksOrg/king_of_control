@@ -26,6 +26,7 @@ class KingOfControl:
             self.correct = set()
             self.wrong = set()
             self.current_status = GameStatus.BLANK
+            self.draw_ball = True
 
         def choose_new_paths(self):
             self.paths = [self.graph.create_random_path_target_size(0, param.TARGET_PATH_SIZE),
@@ -221,9 +222,14 @@ class KingOfControl:
                 elif self.game_vars.current_status == GameStatus.END:
                     pass
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord('q'):
                 cv2.destroyAllWindows()
                 exit(0)
+            elif key == ord('b'):  # << NOVO
+                self.game_vars.draw_ball = not self.game_vars.draw_ball
+                print(f"Draw ball: {self.game_vars.draw_ball}")
+
 
         time_left = param.MAX_TIME - self.game_vars.playing_time
         score = self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong), time_left)
@@ -235,7 +241,7 @@ class KingOfControl:
         white = (255, 255, 255)
         red = (255, 0, 0)
         green = (0, 255, 0)
-        ball_detector = self.ball_detector  # YoloObjectDetector(class_id=param.YOLO_MODEL_BALL_ID, model_path=param.YOLO_MODEL_BALL)
+        ball_detector = self.game_vars.ball_detector  # YoloObjectDetector(class_id=param.YOLO_MODEL_BALL_ID, model_path=param.YOLO_MODEL_BALL)
 
         paths = [self.graph.create_random_path_target_size(0, param.TARGET_PATH_SIZE),
                  self.graph.create_random_path_target_size(1, param.TARGET_PATH_SIZE)]
@@ -334,23 +340,18 @@ class KingOfControl:
         if bbox1 is not None:
             idx, enabled_polygon = self.hex_model_cam1.get_polygon_under_ball(bbox1)
 
-            label = "Ball"
-            x1, y1, x2, y2 = bbox1
-            cv2.rectangle(frame1, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
-            cv2.putText(frame1, label, (int(x1), int(y1) - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            if self.game_vars.draw_ball:
+                label = "Ball"
+                x1, y1, x2, y2 = bbox1
+                cv2.rectangle(frame1, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+                cv2.putText(frame1, label, (int(x1), int(y1) - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
             if enabled_polygon:
                 hex = self.hex_model_cam1.hex_coordinates[idx]
                 hexagon = self.hex_model_cam1.pers_polygons[idx]
 
                 if update_frames:
-#                    label = "Ball"
-#                    x1, y1, x2, y2 = bbox1
-#                    cv2.rectangle(frame1, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
-#                    cv2.putText(frame1, label, (int(x1), int(y1) - 10),
-#                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-
                     self.hex_model_cam1.draw_hexagons(frame1, color=(100, 100, 100))
                     self.hex_model_cam1.draw_polylines(frame1, hexagon, color=(0, 255, 255))
                     # hex = self.hex_model_cam1.get_hex_under_ball(bbox1)
@@ -358,17 +359,19 @@ class KingOfControl:
             bbox2 = ball_detector.detect_best(frame2)
             if bbox2 is not None:
                 idx, enabled_polygon = self.hex_model_cam2.get_polygon_under_ball(bbox2)
+
+                if self.game_vars.draw_ball:
+                    label = "Ball"
+                    x1, y1, x2, y2 = bbox2
+                    cv2.rectangle(frame2, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+                    cv2.putText(frame2, label, (int(x1), int(y1) - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
                 if enabled_polygon:
                     hex = self.hex_model_cam2.hex_coordinates[idx]
                     hexagon = self.hex_model_cam2.pers_polygons[idx]
 
                     if update_frames:
-                        label = "Ball"
-                        x1, y1, x2, y2 = bbox2
-                        cv2.rectangle(frame2, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
-                        cv2.putText(frame2, label, (int(x1), int(y1) - 10),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-
                         self.hex_model_cam2.draw_hexagons(frame2, color=(100, 100, 100))
                         self.hex_model_cam2.draw_polylines(frame2, hexagon, color=(0, 255, 255))
                         # hex = self.hex_model_cam2.get_hex_under_ball(bbox2)
