@@ -37,6 +37,7 @@ COUNTDOWN_AUDIO = "countdown"
 OFFSIDE_IMAGE = r"images\offside.png"
 CTA_IMAGE = r"images\cta.png"
 END_IMAGE = r"images\end_game.png"
+OFF_IMAGE = r"images\off.png"
 
 COUNTDOWN_VIDEO = r"images\countdown.mp4"
 GAME_VIDEO = r"images\game.mp4"

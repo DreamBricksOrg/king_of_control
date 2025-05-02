@@ -21,6 +21,7 @@ class LedPanel(threading.Thread):
                  cta_image=None,
                  offside_image=None,
                  endgame_image=None,
+                 off_image=None,
                  game_audio=None,
                  end_audio=None,
                  cta_audio=None,
@@ -50,6 +51,7 @@ class LedPanel(threading.Thread):
         self.cta_image = self.load_background_image(cta_image)
         self.offside_image = self.load_background_image(offside_image)
         self.endgame_image = self.load_background_image(endgame_image)
+        self.off_image = self.load_background_image(off_image)
 
         self.countdown_cap = cv2.VideoCapture(countdown_video_path)
         self.game_cap = cv2.VideoCapture(game_video_path)
@@ -197,8 +199,12 @@ class LedPanel(threading.Thread):
 
                     elif self.current_state == GameStatus.END:
                         self.audio_player.play_once(self.end_audio)
-
                         self.show_screen(self.endgame_image)
+
+                    elif self.current_state == GameStatus.OFF:
+                        self.audio_player.stop_all()
+                        self.show_screen(self.off_image)
+
                     elif self.current_state == GameStatus.BLANK:
                         self.show_blank_screen()
 

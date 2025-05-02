@@ -8,4 +8,5 @@ class GameStatus(Enum):
     GOAL = 3
     OFFSIDE = 4
     END = 5
-    BLANK = 6
+    OFF = 6
+    BLANK = 7

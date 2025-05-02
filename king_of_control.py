@@ -60,6 +60,7 @@ class KingOfControl:
             cta_audio=param.CTA_AUDIO,
             goal_audio=param.GOAL_AUDIO,
             end_audio=param.END_AUDIO,
+            off_image=param.OFF_IMAGE,
             offside_audio=param.OFFSIDE_AUDIO,
             countdown_audio=param.COUNTDOWN_AUDIO
         )
@@ -137,6 +138,9 @@ class KingOfControl:
 
         return GameStatus.END
 
+    def run_off(self):
+        return GameStatus.OFF
+
     def run_game(self):
         self.game_vars.playing_time = time.time() - self.game_vars.start_time
         print(f"Running Game: {self.game_vars.playing_time}")
@@ -185,6 +189,8 @@ class KingOfControl:
                 next_status = self.run_offside()
             elif self.game_vars.current_status == GameStatus.END:
                 next_status = self.run_end()
+            elif self.game_vars.current_status == GameStatus.OFF:
+                next_status = self.run_off()
 
             if self.game_vars.current_status != next_status:
                 print(f"Status: {next_status}")
@@ -222,13 +228,21 @@ class KingOfControl:
                 elif self.game_vars.current_status == GameStatus.END:
                     pass
 
+                elif self.game_vars.current_status == GameStatus.OFF:
+                    self.board.clear()
+
             key = cv2.waitKey(1) & 0xFF
             if key == ord('q'):
                 cv2.destroyAllWindows()
                 exit(0)
-            elif key == ord('b'):  # << NOVO
+            elif key == ord('b'):
                 self.game_vars.draw_ball = not self.game_vars.draw_ball
                 print(f"Draw ball: {self.game_vars.draw_ball}")
+            elif key == ord('p'):
+                if self.game_vars.current_status == GameStatus.OFF:
+                    self.game_vars.current_status = GameStatus.END
+                else:
+                    self.game_vars.current_status = GameStatus.OFF
 
 
         time_left = param.MAX_TIME - self.game_vars.playing_time
