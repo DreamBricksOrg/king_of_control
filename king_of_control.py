@@ -244,6 +244,7 @@ class KingOfControl:
                     self.game_vars.current_status = GameStatus.END
                 else:
                     self.game_vars.current_status = GameStatus.OFF
+                    self.led_panel.set_state(self.game_vars.current_status)
 
 
         time_left = param.MAX_TIME - self.game_vars.playing_time
@@ -430,6 +431,7 @@ class KingOfControl:
                 break
 
     def get_calibration_points(self, yolo_object_detector):
+        debug_calibration = True
         hex_cal_coord = [(2, 1), (0, 1), (0, 7), (2, 7)]
         red = (255, 0, 0)
         bboxes1 = []
@@ -445,7 +447,11 @@ class KingOfControl:
             self.board.clear()
             self.board.set_hexagon(*coord, red)
             time.sleep(0.2)
+            _, _ = self.cameras.get_frames()
+            time.sleep(0.2)
             frame1, frame2 = self.cameras.get_frames()
+            results1 = None
+            results2 = None
 
             # find it in both cameras
             bbox1 = yolo_object_detector.detect_best(frame1)
@@ -457,6 +463,9 @@ class KingOfControl:
                 time.sleep(0.3)
                 continue
 
+            if debug_calibration:
+                results1 = yolo_object_detector.get_last_results()
+
             bbox2 = yolo_object_detector.detect_best(frame2)
             if bbox2 is None:
                 num_exceptions2 += 1
@@ -465,6 +474,16 @@ class KingOfControl:
                     raise RuntimeError(f"Erro na calibracao da camera 2")
                 time.sleep(0.3)
                 continue
+
+            if debug_calibration:
+                results2 = yolo_object_detector.get_last_results()
+
+                # Draw detections using built-in plot() method
+                annotated_frame1 = results1[0].plot()
+                annotated_frame2 = results2[0].plot()
+
+                composed_frame = stack_frames_vertically(annotated_frame1, annotated_frame2, 640, 720)
+                self.show_frame(composed_frame)
 
             bboxes1.append(bbox1)
             bboxes2.append(bbox2)
