@@ -8,6 +8,9 @@ class HexagonsBoard:
     def set_hexagon(self, col, row, color):
         self.sender.send_bytes(1, col, row, *color)
 
+    def set_goal(self, color):
+        self.sender.send_bytes(2, *color, 0, 0)
+
     def clear(self):
         self.sender.send_bytes(0, 0, 0, 0, 0, 0)
 
@@ -21,26 +24,37 @@ if __name__ == "__main__":
 
     print("Sending data...")
     while True:
+        color = (255, 0, 0)
         for row in range(8):
             num_cols = 3 if row % 2 else 2
             for col in range(num_cols):
-                sender.set_hexagon(col, row, (255, 0, 0))
+                sender.set_hexagon(col, row, color)
                 time.sleep(0.2)
+        sender.set_goal(color)
+
+        color = (0, 255, 0)
         for row in range(8):
             num_cols = 3 if row % 2 else 2
             for col in range(num_cols):
-                sender.set_hexagon(col, row, (0, 255, 0))
+                sender.set_hexagon(col, row, color)
                 time.sleep(0.2)
+        sender.set_goal(color)
+
+        color = (0, 0, 255)
         for row in range(8):
             num_cols = 3 if row % 2 else 2
             for col in range(num_cols):
-                sender.set_hexagon(col, row, (0, 0, 255))
+                sender.set_hexagon(col, row, color)
                 time.sleep(0.2)
+        sender.set_goal(color)
+
+        color = (255, 255, 255)
         for row in range(8):
             num_cols = 3 if row % 2 else 2
             for col in range(num_cols):
-                sender.set_hexagon(col, row, (255, 255, 255))
+                sender.set_hexagon(col, row, color)
                 time.sleep(0.2)
+        sender.set_goal(color)
 
         time.sleep(1)
         sender.clear()
