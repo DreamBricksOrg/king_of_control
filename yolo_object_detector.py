@@ -13,6 +13,10 @@ class YoloObjectDetector:
         """
         self.class_id = class_id
         self.model = YOLO(model_path)
+        self.last_results = None
+
+    def get_last_results(self):
+        return self.last_results
 
     def detect(self, frame: np.ndarray):
         """
@@ -21,10 +25,10 @@ class YoloObjectDetector:
         :param frame: Image frame as a numpy array (e.g., from OpenCV).
         :return: List of bounding boxes [x1, y1, x2, y2] for detected objects.
         """
-        results = self.model(frame)[0]
+        self.last_results = self.model(frame)[0]
         boxes = []
 
-        for box in results.boxes:
+        for box in self.last_results.boxes:
             if int(box.cls[0]) == self.class_id:
                 x1, y1, x2, y2 = box.xyxy[0].tolist()
                 boxes.append([x1, y1, x2, y2])
@@ -38,16 +42,16 @@ class YoloObjectDetector:
         :param frame: Image frame as a numpy array (e.g., from OpenCV).
         :return: List of bounding boxes [x1, y1, x2, y2] for detected objects.
         """
-        result = []
+        self.last_results = []
 
         yolo_result = self.model.track(frame)[0]
 
         for box in yolo_result.boxes:
             if int(box.cls[0]) == self.class_id:
                 x1, y1, x2, y2 = box.xyxy[0].tolist()
-                result.append([x1, y1, x2, y2])
+                self.last_results.append([x1, y1, x2, y2])
 
-        return result
+        return self.last_results
 
     def track_best(self, frame: np.ndarray):
         """
@@ -60,9 +64,9 @@ class YoloObjectDetector:
         best_conf = -1
         best_area = -1
 
-        yolo_result = self.model.track(frame)[0]
+        self.last_results = self.model.track(frame)[0]
 
-        for box in yolo_result.boxes:
+        for box in self.last_results.boxes:
             conf = float(box.conf)
             x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
             area = (x2 - x1) * (y2 - y1)
@@ -74,12 +78,12 @@ class YoloObjectDetector:
         return best_box
 
     def detect_best(self, frame):
-        results = self.model(frame)[0]
+        self.last_results = self.model(frame)[0]
         best_box = None
         best_conf = -1
         best_area = -1
 
-        for box in results.boxes:
+        for box in self.last_results.boxes:
             if int(box.cls) == self.class_id:
                 conf = float(box.conf)
                 x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
