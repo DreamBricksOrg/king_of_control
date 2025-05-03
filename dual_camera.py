@@ -2,6 +2,7 @@ import cv2
 from cv2_utils import stack_frames_vertically
 import threading
 from camera_initializer import CameraInitializer
+import parameters as param
 
 
 class DualCamera:
@@ -13,8 +14,8 @@ class DualCamera:
 
         camera_caps = self.initialize_cameras(cam1_id, cam2_id)
         # Now you can access camera_caps[0] and camera_caps[1]
-        self.cam1 = camera_caps[0]
-        self.cam2 = camera_caps[1]
+        self.cam1 = camera_caps[cam1_id]
+        self.cam2 = camera_caps[cam2_id]
 
     @staticmethod
     def initialize_cameras(cam1_id, cam2_id):
@@ -90,11 +91,11 @@ def test_dual_camera():
     cv2.destroyAllWindows()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__1":
     test_dual_camera()
 
-if __name__ == "__main__1":
-    dual_cam = DualCamera(0, 1, (1280, 720), (1280, 720))
+if __name__ == "__main__":
+    dual_cam = DualCamera(param.CAMERA1_ID, param.CAMERA2_ID, (1280, 720), (1280, 720))
 
     try:
         while True:
