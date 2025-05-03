@@ -37,6 +37,7 @@ class KingOfControl:
         self.RED = (255, 0, 0)
         self.GREEN = (0, 255, 0)
         self.WHITE = (255, 255, 255)
+        self.BLACK = (0, 0, 0)
 
         print("Init Arduino")
         self.board = HexagonsBoard(port=param.ARDUINO_COM_PORT, baudrate=param.ARDUINO_BAUD_RATE)
@@ -75,6 +76,8 @@ class KingOfControl:
 
     def calibration(self):
         #self.led_panel.set_state(GameStatus.BLANK)
+        self.led_panel.show_red_screen()
+
         hex_detector = YoloObjectDetector(class_id=0, model_path=param.YOLO_MODEL_HEXAGON)
         floor_quad1, floor_quad2 = self.get_calibration_points(hex_detector)
 
@@ -172,8 +175,6 @@ class KingOfControl:
 
     def game(self):
 
-        self.led_panel.start()
-
         self.game_vars.current_status = GameStatus.BLANK
         next_status = GameStatus.CTA
         while True:
@@ -206,6 +207,7 @@ class KingOfControl:
                     self.board.set_goal(self.WHITE)
 
                 elif self.game_vars.current_status == GameStatus.COUNTDOWN:
+                    self.board.clear()
                     self.board.set_hexagon(*self.game_vars.chosen_path[0], self.GREEN)
 
                 elif self.game_vars.current_status == GameStatus.GAME:
@@ -534,6 +536,13 @@ class KingOfControl:
                 cv2.destroyAllWindows()
                 break
 
+    def run(self):
+        self.camera_setup()
+        self.calibration()
+        self.calibration_debug()
+        self.led_panel.start()
+        self.game()
+
 
 if __name__ == "__main__0":
     koc = KingOfControl();
@@ -551,8 +560,5 @@ if __name__ == "__main__0":
                 exit(0)
 
 if __name__ == "__main__":
-    koc = KingOfControl();
-    koc.camera_setup()
-    koc.calibration()
-    koc.calibration_debug()
-    koc.game()
+    koc = KingOfControl()
+    koc.run()
