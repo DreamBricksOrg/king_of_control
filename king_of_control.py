@@ -203,6 +203,7 @@ class KingOfControl:
                     self.game_vars.brightness_direction = 10
                     self.game_vars.choose_new_paths()
                     self.board.clear()
+                    self.board.set_goal(self.WHITE)
 
                 elif self.game_vars.current_status == GameStatus.COUNTDOWN:
                     self.board.set_hexagon(*self.game_vars.chosen_path[0], self.GREEN)
@@ -220,13 +221,13 @@ class KingOfControl:
                     self.game_vars.wrong = set()
 
                 elif self.game_vars.current_status == GameStatus.GOAL:
-                    pass
+                    self.board.set_goal(self.GREEN)
 
                 elif self.game_vars.current_status == GameStatus.OFFSIDE:
-                    pass
+                    self.board.set_goal(self.RED)
 
                 elif self.game_vars.current_status == GameStatus.END:
-                    pass
+                    self.board.set_goal(self.RED)
 
                 elif self.game_vars.current_status == GameStatus.OFF:
                     self.board.clear()
