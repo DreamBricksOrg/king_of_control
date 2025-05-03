@@ -241,6 +241,7 @@ if __name__ == "__main__":
         game_audio=param.GAME_AUDIO,
         cta_audio=param.CTA_AUDIO,
         goal_audio=param.GOAL_AUDIO,
+        off_image=param.OFF_IMAGE,
         end_audio=param.END_AUDIO
     )
     led_panel.start()
@@ -248,7 +249,7 @@ if __name__ == "__main__":
     #exit(1)
     print('change state')
 
-    keys = ['0', '1', '2', '3', '4', '5', '6']
+    keys = ['0', '1', '2', '3', '4', '5', '6', '7']
 
     key_idx = 0
     while True:
@@ -270,6 +271,8 @@ if __name__ == "__main__":
             led_panel.set_state(GameStatus.OFFSIDE)
         elif key == '6':
             led_panel.set_state(GameStatus.END)
+        elif key == '7':
+            led_panel.set_state(GameStatus.OFF)
         elif key == 'q':
             led_panel._running = False
             break
