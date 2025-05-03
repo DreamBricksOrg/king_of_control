@@ -1,9 +1,9 @@
 
-CAMERA1_ID = 0
-CAMERA2_ID = 1
+CAMERA1_ID = 1
+CAMERA2_ID = 0
 CAMERA_RESOLUTION = (640, 360)
 
-ARDUINO_COM_PORT = "COM3"
+ARDUINO_COM_PORT = "COM4"
 ARDUINO_BAUD_RATE = 115200
 
 HEXAGONS_SVG_FILE = r"static\assets\hexagons.svg"
@@ -16,7 +16,7 @@ xYOLO_MODEL_BALL_ID = 32
 YOLO_MODEL_BALL_ID = 0
 
 # game parameters
-MAX_TIME = 45    # in seconds
+MAX_TIME = 10    # in seconds
 COUNTDOWN_TIME = 4 # in seconds
 END_TIME = 5
 GOAL_TIME = 8
@@ -43,3 +43,4 @@ COUNTDOWN_VIDEO = r"images\countdown.mp4"
 GAME_VIDEO = r"images\game.mp4"
 GOAL_VIDEO = r"images\goal.mp4"
 
+USE_DSHOW = True
