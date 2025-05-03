@@ -1,5 +1,7 @@
 import cv2
 
+import parameters
+
 
 class CameraInitializer:
     def __init__(self, cam_id, width, height, result_dict):
@@ -10,7 +12,7 @@ class CameraInitializer:
 
     def initialize(self):
         print(f"Starting camera {self.cam_id}")
-        cap = cv2.VideoCapture(self.cam_id)#, cv2.CAP_DSHOW)
+        cap = cv2.VideoCapture(self.cam_id, cv2.CAP_DSHOW) if parameters.USE_DSHOW else cv2.VideoCapture(self.cam_id)
         if not cap.isOpened():
             print(f"Error: Could not open camera {self.cam_id}")
             return
@@ -27,10 +29,25 @@ class CameraInitializer:
 
         print(f"Setting parameters for camera {self.cam_id}")
         # Optional: disable auto exposure and autofocus to prevent slow start
-        #cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)  # 0.25 = manual, 0.75 = auto
-        #cap.set(cv2.CAP_PROP_EXPOSURE, -3)         # You can tune this
-        #cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)         # Turn off autofocus
-        #cap.set(cv2.CAP_PROP_FOCUS, 0)             # Set a fixed focus value
+
+        print("FPS:", cap.get(cv2.CAP_PROP_FPS))
+        print("Autoexposure:", cap.get(cv2.CAP_PROP_AUTO_EXPOSURE))
+        print("Exposure:", cap.get(cv2.CAP_PROP_EXPOSURE))
+        print("Autofocus:", cap.get(cv2.CAP_PROP_AUTOFOCUS))
+        print("Focus:", cap.get(cv2.CAP_PROP_FOCUS))
+
+
+        if False:
+            cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)  # 0.25 = manual, 0.75 = auto
+            cap.set(cv2.CAP_PROP_EXPOSURE, -9)         # You can tune this
+            cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)         # Turn off autofocus
+            cap.set(cv2.CAP_PROP_FOCUS, 0)             # Set a fixed focus value
+
+        print("FPS:", cap.get(cv2.CAP_PROP_FPS))
+        print("Autoexposure:", cap.get(cv2.CAP_PROP_AUTO_EXPOSURE))
+        print("Exposure:", cap.get(cv2.CAP_PROP_EXPOSURE))
+        print("Autofocus:", cap.get(cv2.CAP_PROP_AUTOFOCUS))
+        print("Focus:", cap.get(cv2.CAP_PROP_FOCUS))
 
         # Warm up camera (optional but helps)
         for _ in range(5):
@@ -39,7 +56,7 @@ class CameraInitializer:
         self.result_dict[self.cam_id] = cap
 
 
-if __name__ == "__main__":
+def test_start_with_threads():
     import threading
 
     # Launch threads to initialize both cameras
@@ -58,3 +75,8 @@ if __name__ == "__main__":
     # Now you can access camera_caps[0] and camera_caps[1]
     cam0 = camera_caps[0]
     cam1 = camera_caps[1]
+
+    return cam0, cam1
+
+if __name__ == "__main__":
+    test_start_with_threads()
