@@ -38,6 +38,7 @@ class KingOfControl:
         self.GREEN = (0, 255, 0)
         self.WHITE = (255, 255, 255)
         self.BLACK = (0, 0, 0)
+        self.HEX_CAL_COORD = [(2, 1), (0, 1), (0, 7), (2, 7)]
 
         print("Init Arduino")
         self.board = HexagonsBoard(port=param.ARDUINO_COM_PORT, baudrate=param.ARDUINO_BAUD_RATE)
@@ -67,10 +68,13 @@ class KingOfControl:
         )
 
         self.game_vars = self.GameVariables(self.graph)
+        self.prev_camera1_exposure = 0
+        self.prev_camera2_exposure = 0
 
     def camera_setup(self):
         final_width = 640
         final_height = 720
+        self.display_all_calibration_hexagons()
         exp1, exp2 = self.cameras.display(final_width, final_height)
         print(f"Cameras exposures: {exp1} & {exp2}")
 
@@ -81,8 +85,15 @@ class KingOfControl:
         hex_detector = YoloObjectDetector(class_id=0, model_path=param.YOLO_MODEL_HEXAGON)
         floor_quad1, floor_quad2 = self.get_calibration_points(hex_detector)
 
+        self.led_panel.destroy_calibration_screen()
+
         self.hex_model_cam1.set_calibration_points(floor_quad1)
         self.hex_model_cam2.set_calibration_points(floor_quad2)
+
+        # restore game brightness
+        self.cameras.init1.set_exposure(self.prev_camera1_exposure)
+        self.cameras.init2.set_exposure(self.prev_camera2_exposure)
+
 
     def run_cta(self):
         print("Running CTA")
@@ -247,7 +258,14 @@ class KingOfControl:
                 else:
                     self.game_vars.current_status = GameStatus.OFF
                     self.led_panel.set_state(self.game_vars.current_status)
-
+            elif key == ord('a'):
+                self.cameras.init1.set_exposure(self.cameras.init1.get_exposure() - 1)
+            elif key == ord('s'):
+                self.cameras.init1.set_exposure(self.cameras.init1.get_exposure() + 1)
+            elif key == ord('z'):
+                self.cameras.init2.set_exposure(self.cameras.init2.get_exposure() - 1)
+            elif key == ord('x'):
+                self.cameras.init2.set_exposure(self.cameras.init2.get_exposure() + 1)
 
         time_left = param.MAX_TIME - self.game_vars.playing_time
         score = self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong), time_left)
@@ -432,31 +450,33 @@ class KingOfControl:
                 cv2.destroyAllWindows()
                 break
 
+    def display_all_calibration_hexagons(self):
+        self.board.clear()
+        for coord in self.HEX_CAL_COORD:
+            self.board.set_hexagon(*coord, self.RED)
+
     def get_calibration_points(self, yolo_object_detector):
         debug_calibration = True
-        hex_cal_coord = [(2, 1), (0, 1), (0, 7), (2, 7)]
-        red = (255, 0, 0)
         bboxes1 = []
         bboxes2 = []
 
         coord_idx = 0
         num_exceptions1 = 0
         num_exceptions2 = 0
-        while coord_idx < len(hex_cal_coord):
-            coord = hex_cal_coord[coord_idx]
+        while coord_idx < len(self.HEX_CAL_COORD):
+            coord = self.HEX_CAL_COORD[coord_idx]
 
-            self.led_panel.show_calibration_screen()
-            cv2.waitKey(3)
+            #self.led_panel.show_calibration_screen()
+            #cv2.waitKey(3)
 
             # light up one hexagon
             self.board.clear()
-            self.board.set_hexagon(*coord, red)
+            self.board.set_hexagon(*coord, self.RED)
             time.sleep(0.2)
             _, _ = self.cameras.get_frames()
             time.sleep(0.2)
             frame1, frame2 = self.cameras.get_frames()
             results1 = None
-            results2 = None
 
             # find it in both cameras
             bbox1 = yolo_object_detector.detect_best(frame1)
@@ -489,8 +509,6 @@ class KingOfControl:
 
                 composed_frame = stack_frames_vertically(annotated_frame1, annotated_frame2, 640, 720)
                 self.show_frame(composed_frame)
-                #cv2.imshow("Calibration", composed_frame)
-                #time.sleep(5)
 
             bboxes1.append(bbox1)
             bboxes2.append(bbox2)
@@ -510,7 +528,7 @@ class KingOfControl:
         while True:
             cv2.imshow(title, frame)
             if cv2.waitKey(1) & 0xFF == ord(' '):
-                cv2.destroyAllWindows()
+                cv2.destroyWindow(title)
                 break
 
     def debug_hex_led_mapping(self):
@@ -541,8 +559,74 @@ class KingOfControl:
                 cv2.destroyAllWindows()
                 break
 
+    def calibration_auto_exposure(self):
+        self.display_all_calibration_hexagons()
+        self.led_panel.show_calibration_screen()
+
+        hex_detector = YoloObjectDetector(class_id=0, model_path=param.YOLO_MODEL_HEXAGON)
+
+        # store game brightness
+        self.prev_camera1_exposure = self.cameras.init1.get_exposure()
+        self.prev_camera2_exposure = self.cameras.init2.get_exposure()
+
+        print("calibrating camera 1")
+        self.calibrate_camera_exposure(hex_detector, 1)
+        print("calibrating camera 2")
+        self.calibrate_camera_exposure(hex_detector, 2)
+
+    @staticmethod
+    def calculate_calibration_score(target_num_boxes, boxes, avg_conf):
+        score = avg_conf * 100
+        if len(boxes) < target_num_boxes:
+            score -= 30 * (target_num_boxes - len(boxes))
+        elif len(boxes) > target_num_boxes:
+            score -= 10 * (len(boxes) - target_num_boxes)
+
+        return score
+
+    def calibrate_camera_exposure(self, hex_detector, camera_id):
+        min_exposure = -12
+        max_exposure = 0
+        best_score = -100000
+        best_exposure = min_exposure
+        exposure = min_exposure
+        if camera_id == 1:
+            self.cameras.init1.set_exposure(exposure)
+        else:
+            self.cameras.init2.set_exposure(exposure)
+        while exposure <= max_exposure:
+            frame1, frame2 = self.cameras.get_frames()
+            frame = frame1 if camera_id == 1 else frame2
+            boxes, avg_conf = hex_detector.detect_avg_confidence(frame)
+            score = self.calculate_calibration_score(4, boxes, avg_conf)
+            if score > best_score:
+                print(f"new best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {exposure}")
+                best_score = score
+                best_exposure = exposure
+            else:
+                print(f"best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {exposure}")
+
+            _, _ = self.cameras.get_frames()
+            cv2.waitKey(60)
+            exposure = exposure + 1
+            if camera_id == 1:
+                self.cameras.init1.set_exposure(exposure)
+            else:
+                self.cameras.init2.set_exposure(exposure)
+
+        _, _ = self.cameras.get_frames()
+        cv2.waitKey(60)
+        if camera_id == 1:
+            self.cameras.init1.set_exposure(best_exposure)
+            print(f"final best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {self.cameras.init1.get_exposure()}")
+        else:
+            self.cameras.init2.set_exposure(best_exposure)
+            print(f"final best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {self.cameras.init2.get_exposure()}")
+
+
     def run(self):
         self.camera_setup()
+        self.calibration_auto_exposure()
         self.calibration()
         self.calibration_debug()
         self.led_panel.start()
