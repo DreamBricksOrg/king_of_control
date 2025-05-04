@@ -95,6 +95,29 @@ class YoloObjectDetector:
 
         return best_box
 
+    def detect_avg_confidence(self, frame: np.ndarray):
+        """
+        Detect objects of the specified class_id in the given frame.
+
+        :param frame: Image frame as a numpy array (e.g., from OpenCV).
+        :return: List of bounding boxes [x1, y1, x2, y2] for detected objects.
+        """
+        self.last_results = self.model(frame)[0]
+        boxes = []
+
+        sum_conf = 0
+        for box in self.last_results.boxes:
+            if int(box.cls[0]) == self.class_id:
+                conf = float(box.conf)
+                x1, y1, x2, y2 = box.xyxy[0].tolist()
+
+                sum_conf += conf
+                boxes.append([x1, y1, x2, y2])
+
+        avg_conf = sum_conf / len(boxes) if len(boxes) > 0 else 0
+
+        return boxes, avg_conf
+
 
 if __name__ == "__main__":
     import parameters as param
