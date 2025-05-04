@@ -48,7 +48,8 @@ class LedPanel(threading.Thread):
         self.background_image = self.load_background_image(background_image_path)
         self.black_image = self.create_black_image()
         #self.red_image = self.create_color_image((0, 0, 255))
-        self.red_image = self.create_color_image((128, 128, 128))
+        #self.red_image = self.create_color_image((128, 128, 128))
+        self.red_image = self.load_background_image(r"images\calibration2.png")
 
         self.cta_image = self.load_background_image(cta_image)
         self.offside_image = self.load_background_image(offside_image)
@@ -168,11 +169,23 @@ class LedPanel(threading.Thread):
 
         return cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
 
+
+    def create_left_top_window(self, title, width, height):
+        cv2.namedWindow(title, cv2.WINDOW_NORMAL)
+        cv2.setWindowProperty(title, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        cv2.resizeWindow(title, width, height)
+        cv2.moveWindow(title, 0, 0)
+
+    def show_calibration_screen(self):
+        self.create_left_top_window("App", 1536, 256)
+        self.show_red_screen()
+
     def run(self):
-        cv2.namedWindow("App", cv2.WINDOW_NORMAL)
-        cv2.setWindowProperty("App", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-        cv2.resizeWindow("App", 1536, 256)
-        cv2.moveWindow("App", 0, 0)
+        #cv2.namedWindow("App", cv2.WINDOW_NORMAL)
+        #cv2.setWindowProperty("App", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        #cv2.resizeWindow("App", 1536, 256)
+        #cv2.moveWindow("App", 0, 0)
+        self.create_left_top_window("App", 1536, 256)
 
         while self._running:
             with self.lock:
@@ -222,7 +235,8 @@ class LedPanel(threading.Thread):
                 if self.current_state in [GameStatus.COUNTDOWN, GameStatus.GOAL, GameStatus.GAME]: #
                     self.play_video(current_cap)
 
-            cv2.waitKey(30) & 0xFF
+            cv2.waitKey(30)
+            #time.sleep(0.05)
 
         self.current_cap.release()
         cv2.destroyAllWindows()
