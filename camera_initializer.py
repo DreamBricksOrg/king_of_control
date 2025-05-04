@@ -1,3 +1,5 @@
+from datetime import time
+
 import cv2
 
 import parameters
@@ -78,5 +80,34 @@ def test_start_with_threads():
 
     return cam0, cam1
 
+def test_change_exposure():
+    camera_caps = {}
+    cam_id = parameters.CAMERA1_ID
+    init = CameraInitializer(cam_id, 1280, 720, camera_caps)
+    init.initialize()
+    cap = camera_caps[cam_id]
+
+    _, _ = cap.read()
+    cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)  # 0.25 = manual, 0.75 = auto
+
+    exposure = 0
+    direction = 1
+    while True:
+        ret, frame = cap.read()
+
+        cv2.imshow("Camera", frame)
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord("a"):
+            exposure -= direction
+            print(exposure)
+            cap.set(cv2.CAP_PROP_EXPOSURE, exposure)         # You can tune this
+        elif key == ord("s"):
+            exposure += direction
+            print(exposure)
+            cap.set(cv2.CAP_PROP_EXPOSURE, exposure)         # You can tune this
+        elif key == ord('q'):
+            break
+
 if __name__ == "__main__":
-    test_start_with_threads()
+    #test_start_with_threads()
+    test_change_exposure()
