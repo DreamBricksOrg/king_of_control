@@ -47,6 +47,8 @@ class LedPanel(threading.Thread):
         # Recursos
         self.background_image = self.load_background_image(background_image_path)
         self.black_image = self.create_black_image()
+        #self.red_image = self.create_color_image((0, 0, 255))
+        self.red_image = self.create_color_image((128, 128, 128))
 
         self.cta_image = self.load_background_image(cta_image)
         self.offside_image = self.load_background_image(offside_image)
@@ -74,6 +76,9 @@ class LedPanel(threading.Thread):
 
     def create_black_image(self):
         return np.full((self.WINDOW_SIZE[1], self.WINDOW_SIZE[0], 3), (0, 0, 0), dtype=np.uint8)
+
+    def create_color_image(self, color):
+        return np.full((self.WINDOW_SIZE[1], self.WINDOW_SIZE[0], 3), color, dtype=np.uint8)
 
     def load_background_image(self, path):
         try:
@@ -124,6 +129,9 @@ class LedPanel(threading.Thread):
 
     def show_blank_screen(self):
         cv2.imshow("App", self.black_image)
+
+    def show_red_screen(self):
+        cv2.imshow("App", self.red_image)
 
     def show_screen(self, image):
         cv2.imshow("App", image)
@@ -206,7 +214,8 @@ class LedPanel(threading.Thread):
                         self.show_screen(self.off_image)
 
                     elif self.current_state == GameStatus.BLANK:
-                        self.show_blank_screen()
+                        #self.show_blank_screen()
+                        self.show_red_screen()
 
                     self.last_state = self.current_state
 
