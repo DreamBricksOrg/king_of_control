@@ -128,14 +128,14 @@ class LedPanel(threading.Thread):
         image_bgr = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
         return image_bgr
 
-    def show_blank_screen(self):
-        cv2.imshow("App", self.black_image)
+    def show_blank_screen(self, title="App"):
+        cv2.imshow(title, self.black_image)
 
-    def show_red_screen(self):
-        cv2.imshow("App", self.red_image)
+    def show_red_screen(self, title="App"):
+        cv2.imshow(title, self.red_image)
 
-    def show_screen(self, image):
-        cv2.imshow("App", image)
+    def show_screen(self, image, title="App"):
+        cv2.imshow(title, image)
 
     def show_score_screen(self):
         img = self.background_image.copy()
@@ -169,7 +169,6 @@ class LedPanel(threading.Thread):
 
         return cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
 
-
     def create_left_top_window(self, title, width, height):
         cv2.namedWindow(title, cv2.WINDOW_NORMAL)
         cv2.setWindowProperty(title, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
@@ -177,8 +176,12 @@ class LedPanel(threading.Thread):
         cv2.moveWindow(title, 0, 0)
 
     def show_calibration_screen(self):
-        self.create_left_top_window("App", 1536, 256)
-        self.show_red_screen()
+        title = "Calibration"
+        self.create_left_top_window(title, 1536, 256)
+        self.show_red_screen(title)
+
+    def destroy_calibration_screen(self):
+        cv2.destroyWindow("Calibration")
 
     def run(self):
         #cv2.namedWindow("App", cv2.WINDOW_NORMAL)
@@ -235,8 +238,7 @@ class LedPanel(threading.Thread):
                 if self.current_state in [GameStatus.COUNTDOWN, GameStatus.GOAL, GameStatus.GAME]: #
                     self.play_video(current_cap)
 
-            cv2.waitKey(30)
-            #time.sleep(0.05)
+            cv2.waitKey(60)
 
         self.current_cap.release()
         cv2.destroyAllWindows()
