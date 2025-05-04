@@ -68,15 +68,27 @@ class DualCamera:
         return frame1, frame2
 
     def display(self, final_width, final_height):
+        window_title = "Pressione espaco para continuar..."
         while True:
             frame1, frame2 = self.get_frames()
             composed_frame = stack_frames_vertically(frame1, frame2, final_width, final_height)
             if composed_frame is not None:
-                cv2.imshow("Pressione espaco para continuar...", composed_frame)
+                cv2.imshow(window_title, composed_frame)
 
-            if cv2.waitKey(1) & 0xFF == ord(' '):
-                cv2.destroyAllWindows()
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord(' '):
+                cv2.destroyWindow(window_title)
                 break
+            elif key == ord('a'):
+                self.init1.set_exposure(self.init1.get_exposure()-1)
+            elif key == ord('s'):
+                self.init1.set_exposure(self.init1.get_exposure()+1)
+            elif key == ord('z'):
+                self.init2.set_exposure(self.init2.get_exposure()-1)
+            elif key == ord('x'):
+                self.init2.set_exposure(self.init2.get_exposure()+1)
+
+        return self.init1.get_exposure(), self.init2.get_exposure()
 
     def release(self):
         if self.cam1.isOpened():

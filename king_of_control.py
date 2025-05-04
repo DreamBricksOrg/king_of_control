@@ -71,12 +71,12 @@ class KingOfControl:
     def camera_setup(self):
         final_width = 640
         final_height = 720
-        self.cameras.display(final_width, final_height)
-        cv2.destroyAllWindows()
+        exp1, exp2 = self.cameras.display(final_width, final_height)
+        print(f"Cameras exposures: {exp1} & {exp2}")
 
     def calibration(self):
         #self.led_panel.set_state(GameStatus.BLANK)
-        self.led_panel.show_red_screen()
+        self.led_panel.show_calibration_screen()
 
         hex_detector = YoloObjectDetector(class_id=0, model_path=param.YOLO_MODEL_HEXAGON)
         floor_quad1, floor_quad2 = self.get_calibration_points(hex_detector)
@@ -445,6 +445,9 @@ class KingOfControl:
         while coord_idx < len(hex_cal_coord):
             coord = hex_cal_coord[coord_idx]
 
+            self.led_panel.show_calibration_screen()
+            cv2.waitKey(3)
+
             # light up one hexagon
             self.board.clear()
             self.board.set_hexagon(*coord, red)
@@ -486,6 +489,8 @@ class KingOfControl:
 
                 composed_frame = stack_frames_vertically(annotated_frame1, annotated_frame2, 640, 720)
                 self.show_frame(composed_frame)
+                #cv2.imshow("Calibration", composed_frame)
+                #time.sleep(5)
 
             bboxes1.append(bbox1)
             bboxes2.append(bbox2)
