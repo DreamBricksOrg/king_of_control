@@ -14,8 +14,16 @@ class DualCamera:
 
         camera_caps = self.initialize_cameras(cam1_id, cam2_id)
         # Now you can access camera_caps[0] and camera_caps[1]
-        self.cam1 = camera_caps[cam1_id]
-        self.cam2 = camera_caps[cam2_id]
+        self.init1 = camera_caps[cam1_id]
+        self.init2 = camera_caps[cam2_id]
+        self.cam1 = self.init1.cap
+        self.cam2 = self.init2.cap
+
+    def set_exposure1(self, exposure):
+        self.init1.set_exposure(exposure)
+
+    def set_exposure2(self, exposure):
+        self.init2.set_exposure(exposure)
 
     @staticmethod
     def initialize_cameras(cam1_id, cam2_id):
