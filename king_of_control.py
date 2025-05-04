@@ -585,8 +585,8 @@ class KingOfControl:
         return score
 
     def calibrate_camera_exposure(self, hex_detector, camera_id):
-        min_exposure = -12
-        max_exposure = 0
+        min_exposure = param.MIN_CALIBRATION_EXPOSURE
+        max_exposure = param.MAX_CALIBRATION_EXPOSURE
         best_score = -100000
         best_exposure = min_exposure
         exposure = min_exposure

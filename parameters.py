@@ -42,3 +42,6 @@ GAME_VIDEO = r"images\game.mp4"
 GOAL_VIDEO = r"images\goal.mp4"
 
 USE_DSHOW = True
+
+MIN_CALIBRATION_EXPOSURE = -10
+MAX_CALIBRATION_EXPOSURE = 0
