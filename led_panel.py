@@ -198,7 +198,7 @@ class LedPanel(threading.Thread):
 
                     current_cap = None
                     if self.current_state == GameStatus.CTA:
-                        self.audio_player.play_loop(self.cta_audio)
+                        #self.audio_player.play_loop(self.cta_audio)
                         self.show_screen(self.cta_image)
 
                     elif self.current_state == GameStatus.COUNTDOWN:
@@ -238,7 +238,7 @@ class LedPanel(threading.Thread):
                 if self.current_state in [GameStatus.COUNTDOWN, GameStatus.GOAL, GameStatus.GAME]: #
                     self.play_video(current_cap)
 
-            cv2.waitKey(60)
+            cv2.waitKey(30)
 
         self.current_cap.release()
         cv2.destroyAllWindows()
