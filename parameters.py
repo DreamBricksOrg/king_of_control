@@ -11,7 +11,7 @@ HEXAGONS_SVG_OFFSET = (-75.0, 150.0)
 
 YOLO_MODEL_HEXAGON = r"static\models\yolo11m_hexagon.pt"
 xYOLO_MODEL_BALL = r"static\models\custom_ball.pt"
-YOLO_MODEL_BALL = r"static\models\ucl_custom_ball_v2.pt"
+YOLO_MODEL_BALL = r"static\models\ucl_custom_ball_v3.pt"
 YOLO_MODEL_BALL_ID = 0
 
 # game parameters
