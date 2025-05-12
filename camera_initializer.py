@@ -69,10 +69,11 @@ class CameraInitializer:
     def get_brightness(self):
         return self.camera_parameters["brightness"]
 
-    def set_exposure(self, exposure):
+    def set_exposure(self, exposure, save=True):
         self.cap.set(cv2.CAP_PROP_EXPOSURE, exposure)
         self.camera_parameters["exposure"] = exposure
-        self.save_camera_params(self.camera_parameters)
+        if save:
+            self.save_camera_params(self.camera_parameters)
 
     def set_brightness(self, brightness):
         self.cap.set(cv2.CAP_PROP_BRIGHTNESS, brightness)
