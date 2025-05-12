@@ -591,9 +591,9 @@ class KingOfControl:
         best_exposure = min_exposure
         exposure = min_exposure
         if camera_id == 1:
-            self.cameras.init1.set_exposure(exposure)
+            self.cameras.init1.set_exposure(exposure, save=False)
         else:
-            self.cameras.init2.set_exposure(exposure)
+            self.cameras.init2.set_exposure(exposure, save=False)
         while exposure <= max_exposure:
             frame1, frame2 = self.cameras.get_frames()
             frame = frame1 if camera_id == 1 else frame2
@@ -610,17 +610,17 @@ class KingOfControl:
             cv2.waitKey(60)
             exposure = exposure + 1
             if camera_id == 1:
-                self.cameras.init1.set_exposure(exposure)
+                self.cameras.init1.set_exposure(exposure, save=False)
             else:
-                self.cameras.init2.set_exposure(exposure)
+                self.cameras.init2.set_exposure(exposure, save=False)
 
         _, _ = self.cameras.get_frames()
         cv2.waitKey(60)
         if camera_id == 1:
-            self.cameras.init1.set_exposure(best_exposure)
+            self.cameras.init1.set_exposure(best_exposure, save=False)
             print(f"final best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {self.cameras.init1.get_exposure()}")
         else:
-            self.cameras.init2.set_exposure(best_exposure)
+            self.cameras.init2.set_exposure(best_exposure, save=False)
             print(f"final best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {self.cameras.init2.get_exposure()}")
 
 
