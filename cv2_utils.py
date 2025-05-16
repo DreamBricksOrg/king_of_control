@@ -39,3 +39,20 @@ def stack_frames_vertically(frame1, frame2, final_width, final_height):
     return composed
 
 
+def stack_frames_horizontally(frame1, frame2, final_width, final_height):
+
+    if frame1 is None or frame2 is None:
+        print("Could not retrieve frames from both cameras.")
+        return None
+
+    # Calculate individual target heights
+    half_width = final_width // 2
+
+    # Resize frames to target width and half height
+    frame1_resized = cv2.resize(frame1, (half_width, final_height))
+    frame2_resized = cv2.resize(frame2, (half_width, final_height))
+
+    # Stack frames horizontally
+    composed = np.hstack((frame1_resized, frame2_resized))
+
+    return composed

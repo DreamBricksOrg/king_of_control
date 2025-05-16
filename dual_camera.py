@@ -1,5 +1,5 @@
 import cv2
-from cv2_utils import stack_frames_vertically
+from cv2_utils import stack_frames_vertically, stack_frames_horizontally
 import threading
 from camera_initializer import CameraInitializer
 import parameters as param
@@ -67,11 +67,13 @@ class DualCamera:
 
         return frame1, frame2
 
-    def display(self, final_width, final_height):
+    def display(self, final_width, final_height, vertical=True):
         window_title = "Pressione espaco para continuar..."
         while True:
             frame1, frame2 = self.get_frames()
-            composed_frame = stack_frames_vertically(frame1, frame2, final_width, final_height)
+            composed_frame = stack_frames_vertically(frame1, frame2, final_width, final_height) if vertical \
+                else stack_frames_horizontally(frame1, frame2, final_width, final_height)
+
             if composed_frame is not None:
                 cv2.imshow(window_title, composed_frame)
 
