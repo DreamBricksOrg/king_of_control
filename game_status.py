@@ -10,3 +10,4 @@ class GameStatus(Enum):
     END = 5
     OFF = 6
     BLANK = 7
+    SHUTDOWN = 8
