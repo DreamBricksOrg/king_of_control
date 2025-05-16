@@ -233,6 +233,10 @@ class LedPanel(threading.Thread):
                         #self.show_blank_screen()
                         self.show_red_screen()
 
+                    elif self.current_state == GameStatus.SHUTDOWN:
+                        print("Led Panel shutdown")
+                        break
+
                     self.last_state = self.current_state
 
                 if self.current_state in [GameStatus.COUNTDOWN, GameStatus.GOAL, GameStatus.GAME]: #
@@ -240,8 +244,9 @@ class LedPanel(threading.Thread):
 
             cv2.waitKey(30)
 
-        self.current_cap.release()
-        cv2.destroyAllWindows()
+        print("Destroying all windows!")
+        cv2.destroyWindow("App")
+        print("led panel exit!")
 
     def set_state(self, state):
         with self.lock:

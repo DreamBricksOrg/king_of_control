@@ -247,7 +247,11 @@ class KingOfControl:
 
             key = cv2.waitKey(1) & 0xFF
             if key == ord('q'):
-                cv2.destroyAllWindows()
+                print("Exiting program")
+                self.led_panel.set_state(GameStatus.SHUTDOWN)
+                self.led_panel.join()
+                print("Led Panel Thread finished")
+                cv2.destroyWindow("game")
                 exit(0)
             elif key == ord('b'):
                 self.game_vars.draw_ball = not self.game_vars.draw_ball
@@ -428,10 +432,11 @@ class KingOfControl:
                 last_hex = hex
 
             composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
-            cv2.imshow("Pressione espaco para continuar...", composed_frame)
+            winname = "Pressione espaco para continuar..."
+            cv2.imshow(winname, composed_frame)
 
             if cv2.waitKey(1) & 0xFF == ord(' '):
-                cv2.destroyAllWindows()
+                cv2.destroyWindow(winname)
                 break
 
     def calibration_debug(self):
@@ -442,12 +447,15 @@ class KingOfControl:
         self.hex_model_cam2.draw_hexagons(frame2, color=magenta)
         composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
 
+        winname = None
         if composed_frame is not None:
-            cv2.imshow("Pressione espaco para continuar...", composed_frame)
+            winname = "Pressione espaco para continuar..."
+            cv2.imshow(winname, composed_frame)
 
         while True:
             if cv2.waitKey(1) & 0xFF == ord(' '):
-                cv2.destroyAllWindows()
+                if winname:
+                    cv2.destroyWindow(winname)
                 break
 
     def display_all_calibration_hexagons(self):
@@ -524,11 +532,11 @@ class KingOfControl:
         return floor_quad1, floor_quad2
 
     @staticmethod
-    def show_frame(frame, title="Pressione espaco para continuar..."):
+    def show_frame(frame, winname="Pressione espaco para continuar..."):
         while True:
-            cv2.imshow(title, frame)
+            cv2.imshow(winname, frame)
             if cv2.waitKey(1) & 0xFF == ord(' '):
-                cv2.destroyWindow(title)
+                cv2.destroyWindow(winname)
                 break
 
     def debug_hex_led_mapping(self):
@@ -545,7 +553,8 @@ class KingOfControl:
             self.hex_model_cam1.draw_polylines(frame1, pers_hex, color=(0, 255, 255))
 
             composed_frame = frame1  # stack_frames_vertically(frame1, frame2, 640, 720)
-            cv2.imshow("Pressione espaco para continuar...", composed_frame)
+            winname = "Pressione espaco para continuar..."
+            cv2.imshow(winname, composed_frame)
 
             print(f"hexagon: {len(hexagon)}-{self.hex_model_cam1.get_avg_point(hexagon)}-{hexagon}")
             print(f"pers_hex: {len(pers_hex)}-{self.hex_model_cam1.get_avg_point(pers_hex)}-{pers_hex}")
@@ -556,7 +565,7 @@ class KingOfControl:
             hex_id = (hex_id + 1) % num_hexes
 
             if cv2.waitKey(1) & 0xFF == ord(' '):
-                cv2.destroyAllWindows()
+                cv2.destroyWindow(winname)
                 break
 
     def calibration_auto_exposure(self):
@@ -634,7 +643,7 @@ class KingOfControl:
 
 
 if __name__ == "__main__0":
-    koc = KingOfControl();
+    koc = KingOfControl()
     koc.camera_setup()
     # koc.calibration()
     # koc.calibration_debug()
