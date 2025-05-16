@@ -72,3 +72,21 @@ if __name__ == "__main__":
         #    sender.read_serial()
     finally:
         sender.close()
+
+
+class DummyArduinoSerialSender:
+    START_BYTE = 242
+    END_BYTE = 243
+    NUM_BYTES = 6
+
+    def __init__(self, port, baudrate=115200, timeout=1):
+        pass
+
+    def send_bytes(self, b0, b1, b2, b3, b4, b5):
+        print(f"send_bytes({b0}, {b1}, {b2}, {b3}, {b4}, {b5}")
+
+    def read_serial(self):
+        pass
+
+    def close(self):
+        pass
