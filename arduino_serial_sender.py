@@ -79,7 +79,7 @@ class DummyArduinoSerialSender:
     END_BYTE = 243
     NUM_BYTES = 6
 
-    def __init__(self, port, baudrate=115200, timeout=1):
+    def __init__(self):
         pass
 
     def send_bytes(self, b0, b1, b2, b3, b4, b5):

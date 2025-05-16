@@ -1,9 +1,10 @@
-from arduino_serial_sender import ArduinoSerialSender
-
+from arduino_serial_sender import ArduinoSerialSender, DummyArduinoSerialSender
+import parameters as param
 
 class HexagonsBoard:
     def __init__(self, port, baudrate):
-        self.sender = ArduinoSerialSender(port, baudrate)
+        self.sender = ArduinoSerialSender(port, baudrate) if param.DUMMY_ARDUINO == 0 \
+            else DummyArduinoSerialSender()
 
     def set_hexagon(self, col, row, color):
         self.sender.send_bytes(1, col, row, *color)
