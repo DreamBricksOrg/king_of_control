@@ -1,3 +1,5 @@
+import copy
+
 import cv2
 import parameters as param
 from hexagons_board import HexagonsBoard
@@ -34,6 +36,7 @@ class KingOfControl:
             return self.paths
 
     def __init__(self):
+        self.clicked_point = None
         self.RED = (255, 0, 0)
         self.GREEN = (0, 255, 0)
         self.WHITE = (255, 255, 255)
@@ -72,10 +75,10 @@ class KingOfControl:
         self.prev_camera2_exposure = 0
 
     def camera_setup(self):
-        final_width = 640
-        final_height = 720
+        final_width = 800
+        final_height = 225
         self.display_all_calibration_hexagons()
-        exp1, exp2 = self.cameras.display(final_width, final_height)
+        exp1, exp2 = self.cameras.display(final_width, final_height, vertical=0)
         print(f"Cameras exposures: {exp1} & {exp2}")
 
     def calibration(self):
@@ -94,6 +97,23 @@ class KingOfControl:
         self.cameras.init1.set_exposure(self.prev_camera1_exposure)
         self.cameras.init2.set_exposure(self.prev_camera2_exposure)
 
+    def manual_calibration(self):
+        # restore game brightness
+        self.cameras.init1.set_exposure(self.prev_camera1_exposure)
+        self.cameras.init2.set_exposure(self.prev_camera2_exposure)
+
+        floor_quad1 = self.get_calibration_points_from_mouse(1)
+        floor_quad2 = self.get_calibration_points_from_mouse(2)
+
+        self.hex_model_cam1.set_calibration_points(floor_quad1)
+        self.hex_model_cam2.set_calibration_points(floor_quad2)
+
+    def shutdown(self):
+        self.led_panel.set_state(GameStatus.SHUTDOWN)
+        self.led_panel.join()
+        print("Led Panel Thread finished")
+        cv2.destroyWindow("game")
+        exit(0)
 
     def run_cta(self):
         print("Running CTA")
@@ -248,11 +268,7 @@ class KingOfControl:
             key = cv2.waitKey(1) & 0xFF
             if key == ord('q'):
                 print("Exiting program")
-                self.led_panel.set_state(GameStatus.SHUTDOWN)
-                self.led_panel.join()
-                print("Led Panel Thread finished")
-                cv2.destroyWindow("game")
-                exit(0)
+                self.shutdown()
             elif key == ord('b'):
                 self.game_vars.draw_ball = not self.game_vars.draw_ball
                 print(f"Draw ball: {self.game_vars.draw_ball}")
@@ -453,15 +469,101 @@ class KingOfControl:
             cv2.imshow(winname, composed_frame)
 
         while True:
-            if cv2.waitKey(1) & 0xFF == ord(' '):
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord(' '):
                 if winname:
                     cv2.destroyWindow(winname)
                 break
+            elif key == ord('m'):
+                if winname:
+                    cv2.destroyWindow(winname)
+                raise RuntimeError
+            elif key == ord('q'):
+                self.shutdown()
 
     def display_all_calibration_hexagons(self):
         self.board.clear()
         for coord in self.HEX_CAL_COORD:
             self.board.set_hexagon(*coord, self.RED)
+
+    def mouse_callback(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            print(f"Clicked at: ({x}, {y})")
+            self.clicked_point = (x, y)
+
+    def open_window_user_selection(self, frame):
+        winname = "Selecione meio do hexagono vermelho"
+        # Show image window
+        cv2.namedWindow(winname)
+        self.clicked_point = None
+        cv2.setMouseCallback(winname, self.mouse_callback)
+
+        frame_copy = copy.deepcopy(frame)
+        while True:
+            # Show current image (with markers if needed)
+            if self.clicked_point:
+                frame_copy = copy.deepcopy(frame)
+                cv2.circle(frame_copy, self.clicked_point, 5, (0, 0, 255), -1)
+
+            cv2.imshow(winname, frame_copy)
+            key = cv2.waitKey(1)
+
+            if key & 0xFF == ord(' '):  # SPACE key to exit
+                break
+
+        cv2.destroyWindow(winname)
+
+        if self.clicked_point is None or len(self.clicked_point) == 0:
+            return None
+
+        print("Selected point:", self.clicked_point)
+        return self.clicked_point[0], self.clicked_point[1], self.clicked_point[0], self.clicked_point[1]
+
+    def get_calibration_points_from_mouse(self, camera_id):
+        debug_calibration = True
+        bboxes = []
+
+        coord_idx = 0
+        num_exceptions = 0
+        while coord_idx < len(self.HEX_CAL_COORD):
+            coord = self.HEX_CAL_COORD[coord_idx]
+
+            #self.led_panel.show_calibration_screen()
+            #cv2.waitKey(3)
+
+            # light up one hexagon
+            self.board.clear()
+            self.board.set_hexagon(*coord, self.RED)
+            time.sleep(0.2)
+            _, _ = self.cameras.get_frames()
+            time.sleep(0.2)
+            frame1, frame2 = self.cameras.get_frames()
+
+            frame = frame1 if camera_id == 1 else frame2
+            results = None
+
+            # find it in both cameras
+            bbox = self.open_window_user_selection(frame)
+            if bbox is None:
+                num_exceptions += 1
+                if num_exceptions > 5:
+                    self.show_frame(frame1)
+                    raise RuntimeError(f"Erro na calibracao da camera {camera_id}")
+                time.sleep(0.3)
+                continue
+
+            bboxes.append(bbox)
+
+            coord_idx += 1
+            num_exceptions = 0
+
+        self.board.clear()
+        if camera_id == 1:
+            floor_quad = self.hex_model_cam1.calculate_floor_quad(bboxes)
+        else:
+            floor_quad = self.hex_model_cam2.calculate_floor_quad(bboxes)
+
+        return floor_quad
 
     def get_calibration_points(self, yolo_object_detector):
         debug_calibration = True
@@ -635,9 +737,19 @@ class KingOfControl:
 
     def run(self):
         self.camera_setup()
-        self.calibration_auto_exposure()
-        self.calibration()
-        self.calibration_debug()
+
+        try: # automatic calibration
+            self.calibration_auto_exposure()
+            self.calibration()
+            self.calibration_debug()
+        except RuntimeError:
+            while True:
+                try:
+                    self.manual_calibration()
+                    self.calibration_debug()
+                    break
+                except RuntimeError:
+                    pass
         self.led_panel.start()
         self.game()
 
