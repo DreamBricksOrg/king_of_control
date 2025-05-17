@@ -14,6 +14,8 @@ YOLO_MODEL_HEXAGON = r"static\models\yolo11m_hexagon.pt"
 xYOLO_MODEL_BALL = r"static\models\custom_ball.pt"
 YOLO_MODEL_BALL = r"static\models\ucl_custom_ball_v3.pt"
 YOLO_MODEL_BALL_ID = 0
+MIN_CONFIDENCE_BALL = 0.25
+MIN_CONFIDENCE_HEXAGON = 0.30
 
 # game parameters
 MAX_TIME = 10    # in seconds

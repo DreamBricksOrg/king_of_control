@@ -390,7 +390,7 @@ class KingOfControl:
     def get_hex_under_ball(self, ball_detector, update_frames=True):
         frame1, frame2 = self.cameras.get_frames()
 
-        bbox1 = ball_detector.detect_best(frame1)
+        bbox1 = ball_detector.detect_best(frame1, param.MIN_CONFIDENCE_BALL)
 
         hex = None
         if bbox1 is not None:
@@ -412,7 +412,7 @@ class KingOfControl:
                     self.hex_model_cam1.draw_polylines(frame1, hexagon, color=(0, 255, 255))
                     # hex = self.hex_model_cam1.get_hex_under_ball(bbox1)
         else:
-            bbox2 = ball_detector.detect_best(frame2)
+            bbox2 = ball_detector.detect_best(frame2, param.MIN_CONFIDENCE_BALL)
             if bbox2 is not None:
                 idx, enabled_polygon = self.hex_model_cam2.get_polygon_under_ball(bbox2)
 
@@ -589,7 +589,7 @@ class KingOfControl:
             results1 = None
 
             # find it in both cameras
-            bbox1 = yolo_object_detector.detect_best(frame1)
+            bbox1 = yolo_object_detector.detect_best(frame1, param.MIN_CONFIDENCE_HEXAGON)
             if bbox1 is None:
                 num_exceptions1 += 1
                 if num_exceptions1 > 5:
@@ -601,7 +601,7 @@ class KingOfControl:
             if debug_calibration:
                 results1 = yolo_object_detector.get_last_results()
 
-            bbox2 = yolo_object_detector.detect_best(frame2)
+            bbox2 = yolo_object_detector.detect_best(frame2, param.MIN_CONFIDENCE_HEXAGON)
             if bbox2 is None:
                 num_exceptions2 += 1
                 if num_exceptions2 > 5:
@@ -708,7 +708,7 @@ class KingOfControl:
         while exposure <= max_exposure:
             frame1, frame2 = self.cameras.get_frames()
             frame = frame1 if camera_id == 1 else frame2
-            boxes, avg_conf = hex_detector.detect_avg_confidence(frame)
+            boxes, avg_conf = hex_detector.detect_avg_confidence(frame, param.MIN_CONFIDENCE_HEXAGON)
             score = self.calculate_calibration_score(4, boxes, avg_conf)
             if score > best_score:
                 print(f"new best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {exposure}")
