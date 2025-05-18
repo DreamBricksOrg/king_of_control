@@ -11,11 +11,17 @@ class ArduinoSerialSender:
     NUM_BYTES = 6
 
     def __init__(self, port, baudrate=115200, timeout=1):
+        init_failed = False
+        msg = ""
         try:
             self.ser = serial.Serial(port, baudrate, timeout=timeout)
         except serial.SerialException:
-            logger.critical(f"Could not open serial: {port}")
-            exit(1)
+            msg = f"Could not open serial: {port}"
+            logger.critical(msg)
+            init_failed = True
+
+        if init_failed:
+            raise RuntimeError(msg)
         #time.sleep(0.5)  # Give Arduino time to reset after serial connection
 
     def send_bytes(self, b0, b1, b2, b3, b4, b5):
