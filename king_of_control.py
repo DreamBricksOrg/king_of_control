@@ -1,4 +1,5 @@
 import copy
+import traceback
 
 import cv2
 import parameters as param
@@ -12,14 +13,16 @@ from hex_graph import HexGraph
 from led_panel import LedPanel
 from game_status import GameStatus
 import logging
-from utils import generate_timestamped_filename
+from utils import generate_timestamped_filename, ensure_directory
 
 # Configure logging to write to a file and to the std output
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # Create a file handler and set its format and level
-log_filename = generate_timestamped_filename("logs", param.LOG_FILENAME_PREFIX, "log")
+LOGS_PATH = "logs"
+ensure_directory(LOGS_PATH)
+log_filename = generate_timestamped_filename(LOGS_PATH, param.LOG_FILENAME_PREFIX, "log")
 file_handler = logging.FileHandler(log_filename)
 file_handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -765,23 +768,25 @@ class KingOfControl:
 
 
     def run(self):
-        logger.info("Application King of Control started (logging to file).")
-        self.camera_setup()
+        try:
+            self.camera_setup()
 
-        try: # automatic calibration
-            self.calibration_auto_exposure()
-            self.calibration()
-            self.calibration_debug()
-        except RuntimeError:
-            while True:
-                try:
-                    self.manual_calibration()
-                    self.calibration_debug()
-                    break
-                except RuntimeError:
-                    pass
-        self.led_panel.start()
-        self.game()
+            try: # automatic calibration
+                self.calibration_auto_exposure()
+                self.calibration()
+                self.calibration_debug()
+            except RuntimeError:
+                while True:
+                    try:
+                        self.manual_calibration()
+                        self.calibration_debug()
+                        break
+                    except RuntimeError:
+                        pass
+            self.led_panel.start()
+            self.game()
+        except Exception as e:
+            logger.critical(f"Error: {e}\n{traceback.format_exc()}")
 
 
 if __name__ == "__main__0":
@@ -800,5 +805,6 @@ if __name__ == "__main__0":
                 exit(0)
 
 if __name__ == "__main__":
+    logger.info("Application King of Control started (logging to file).")
     koc = KingOfControl()
     koc.run()

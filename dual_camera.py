@@ -3,6 +3,9 @@ from cv2_utils import stack_frames_vertically, stack_frames_horizontally
 import threading
 from camera_initializer import CameraInitializer
 import parameters as param
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DualCamera:
@@ -52,7 +55,7 @@ class DualCamera:
         current_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
         if current_width != desired_width or current_height != desired_height:
-            print(f"set resolution for camera {cam_id}")
+            logger.debug(f"set resolution for camera {cam_id}")
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, desired_width)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, desired_height)
 

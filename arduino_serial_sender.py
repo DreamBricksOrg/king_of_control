@@ -1,5 +1,8 @@
 import serial
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ArduinoSerialSender:
@@ -11,7 +14,7 @@ class ArduinoSerialSender:
         try:
             self.ser = serial.Serial(port, baudrate, timeout=timeout)
         except serial.SerialException:
-            print(f"Could not open serial: {port}")
+            logger.critical(f"Could not open serial: {port}")
             exit(1)
         #time.sleep(0.5)  # Give Arduino time to reset after serial connection
 
@@ -27,11 +30,29 @@ class ArduinoSerialSender:
         while self.ser.in_waiting > 0:
             line = self.ser.readline().decode(errors='ignore').strip()
             if line:
-                print(f"Received: {line}")
+                logger.debug(f"Received: {line}")
 
     def close(self):
         if self.ser.is_open:
             self.ser.close()
+
+
+class DummyArduinoSerialSender:
+    START_BYTE = 242
+    END_BYTE = 243
+    NUM_BYTES = 6
+
+    def __init__(self):
+        pass
+
+    def send_bytes(self, b0, b1, b2, b3, b4, b5):
+        logger.debug(f"Dummy send_bytes({b0}, {b1}, {b2}, {b3}, {b4}, {b5}")
+
+    def read_serial(self):
+        pass
+
+    def close(self):
+        pass
 
 
 # Example Usage
@@ -72,21 +93,3 @@ if __name__ == "__main__":
         #    sender.read_serial()
     finally:
         sender.close()
-
-
-class DummyArduinoSerialSender:
-    START_BYTE = 242
-    END_BYTE = 243
-    NUM_BYTES = 6
-
-    def __init__(self):
-        pass
-
-    def send_bytes(self, b0, b1, b2, b3, b4, b5):
-        print(f"send_bytes({b0}, {b1}, {b2}, {b3}, {b4}, {b5}")
-
-    def read_serial(self):
-        pass
-
-    def close(self):
-        pass

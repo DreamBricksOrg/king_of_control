@@ -2,7 +2,10 @@ import parameters as param
 import cv2
 import numpy as np
 import math
+import logging
 from svg_parse import parse_svg_to_polylines
+
+logger = logging.getLogger(__name__)
 
 
 class HexBoardModel:
@@ -45,7 +48,7 @@ class HexBoardModel:
         self.floor_quad = floor_quad
         self.pers_polygons = HexBoardModel.create_perspective_polygons(self.floor_quad, self.bounds, self.hexagons)
         for i in range(len(self.pers_polygons)):
-            print(f"{i:02d} - {self.hex_coordinates[i]} - Pers:{len(self.pers_polygons[i])}:{self.pers_polygons[i]} - Hex:{len(self.hexagons[i])}:{self.hexagons[i]}")
+            logger.debug(f"{i:02d} - {self.hex_coordinates[i]} - Pers:{len(self.pers_polygons[i])}:{self.pers_polygons[i]} - Hex:{len(self.hexagons[i])}:{self.hexagons[i]}")
 
     def draw_hexagons(self, frame, color=(255, 0, 0)):
         self.draw_perspective_polygons(frame, self.floor_quad, self.bounds, self.hexagons, color)

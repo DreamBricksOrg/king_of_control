@@ -2,6 +2,18 @@ import os
 from datetime import datetime
 
 
+def ensure_directory(path):
+    """
+    Create the directory if it doesn't exist.
+
+    Args:
+        path (str): The path to the directory to ensure exists.
+    """
+    if not os.path.exists(path):
+        os.makedirs(path)
+        print(f"Directory created: {path}")
+
+
 def generate_timestamped_filename(base_folder: str, prefix: str, extension: str) -> str:
     """
     Generates a filename with the current timestamp in the format:

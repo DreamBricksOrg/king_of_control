@@ -1,5 +1,8 @@
 import cv2
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def draw_cross(frame, center, size=10, color=(0, 255, 0), thickness=2):
@@ -23,7 +26,7 @@ def draw_cross(frame, center, size=10, color=(0, 255, 0), thickness=2):
 def stack_frames_vertically(frame1, frame2, final_width, final_height):
 
     if frame1 is None or frame2 is None:
-        print("Could not retrieve frames from both cameras.")
+        logger.warning("Could not retrieve frames from both cameras.")
         return None
 
     # Calculate individual target heights
@@ -42,7 +45,7 @@ def stack_frames_vertically(frame1, frame2, final_width, final_height):
 def stack_frames_horizontally(frame1, frame2, final_width, final_height):
 
     if frame1 is None or frame2 is None:
-        print("Could not retrieve frames from both cameras.")
+        logger.warning("Could not retrieve frames from both cameras.")
         return None
 
     # Calculate individual target heights

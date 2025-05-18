@@ -1,10 +1,11 @@
 from datetime import time
 import json
 import os
-
 import cv2
-
 import parameters
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # Default camera parameters
@@ -12,6 +13,7 @@ DEFAULT_CAMERA_PARAMS = {
     "exposure": -5,
     "brightness": 128
 }
+
 
 class CameraInitializer:
     def __init__(self, cam_id, width, height, result_dict):
@@ -24,10 +26,10 @@ class CameraInitializer:
         self.cap = None
 
     def initialize(self):
-        print(f"Starting camera {self.cam_id}")
+        logger.debug(f"Starting camera {self.cam_id}")
         self.cap = cv2.VideoCapture(self.cam_id, cv2.CAP_DSHOW) if parameters.USE_DSHOW else cv2.VideoCapture(self.cam_id)
         if not self.cap.isOpened():
-            print(f"Error: Could not open camera {self.cam_id}")
+            logger.critical(f"Error: Could not open camera {self.cam_id}")
             return
 
         # Get current resolution
@@ -36,11 +38,11 @@ class CameraInitializer:
 
         # Only set if different
         if (current_width != self.width) or (current_height != self.height):
-            print(f"Setting resolution for camera {self.cam_id}")
+            logger.debug(f"Setting resolution for camera {self.cam_id}")
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
 
-        print(f"Setting parameters for camera {self.cam_id}")
+        logger.debug(f"Setting parameters for camera {self.cam_id}")
 
         _, _ = self.cap.read() # changing the parameters only works if we read a frame before
 
@@ -50,12 +52,12 @@ class CameraInitializer:
         self.cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)         # Turn off autofocus
         self.cap.set(cv2.CAP_PROP_FOCUS, 0)             # Set a fixed focus value
 
-        print("FPS:", self.cap.get(cv2.CAP_PROP_FPS))
-        print("Autoexposure:", self.cap.get(cv2.CAP_PROP_AUTO_EXPOSURE))
-        print("Exposure:", self.cap.get(cv2.CAP_PROP_EXPOSURE))
-        print("Brightness:", self.cap.get(cv2.CAP_PROP_BRIGHTNESS))
-        print("Autofocus:", self.cap.get(cv2.CAP_PROP_AUTOFOCUS))
-        print("Focus:", self.cap.get(cv2.CAP_PROP_FOCUS))
+        logger.debug("FPS:", self.cap.get(cv2.CAP_PROP_FPS))
+        logger.debug("Autoexposure:", self.cap.get(cv2.CAP_PROP_AUTO_EXPOSURE))
+        logger.debug("Exposure:", self.cap.get(cv2.CAP_PROP_EXPOSURE))
+        logger.debug("Brightness:", self.cap.get(cv2.CAP_PROP_BRIGHTNESS))
+        logger.debug("Autofocus:", self.cap.get(cv2.CAP_PROP_AUTOFOCUS))
+        logger.debug("Focus:", self.cap.get(cv2.CAP_PROP_FOCUS))
 
         # Warm up camera (optional but helps)
         for _ in range(5):
@@ -116,6 +118,7 @@ def test_start_with_threads():
 
     return cam0, cam1
 
+
 def test_change_exposure():
     camera_caps = {}
     cam_id = parameters.CAMERA1_ID
@@ -140,6 +143,7 @@ def test_change_exposure():
             camera1.set_exposure(exposure)
         elif key == ord('q'):
             break
+
 
 if __name__ == "__main__":
     #test_start_with_threads()

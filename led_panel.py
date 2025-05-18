@@ -6,6 +6,9 @@ from PIL import ImageFont, ImageDraw, Image
 from audio_player import AudioPlayer
 import threading
 from game_status import GameStatus
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class LedPanel(threading.Thread):
@@ -89,12 +92,12 @@ class LedPanel(threading.Thread):
             else:
                 raise Exception("Imagem de fundo não encontrada.")
         except Exception as e:
-            print(f"Erro ao carregar imagem de fundo: {e}")
+            logger.error(f"Erro ao carregar imagem de fundo: {e}")
             return self.black_image
 
     def play_video(self, cap):
         if not cap.isOpened():
-            print("Erro ao abrir o vídeo")
+            logger.error("Erro ao abrir o vídeo")
             self._running = False
             return
 
@@ -120,7 +123,7 @@ class LedPanel(threading.Thread):
         try:
             font = ImageFont.truetype(font_path, font_size)
         except Exception as e:
-            print(f"Erro ao carregar fonte: {e}")
+            logger.error(f"Erro ao carregar fonte: {e}")
             font = ImageFont.load_default()
 
         draw.text(position, text, font=font, fill=color)
@@ -150,7 +153,7 @@ class LedPanel(threading.Thread):
         try:
             font = ImageFont.truetype(self.FONT_PATH, font_size)
         except Exception as e:
-            print(f"Erro ao carregar fonte: {e}")
+            logger.error(f"Erro ao carregar fonte: {e}")
             font = ImageFont.load_default()
 
         image_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -193,7 +196,7 @@ class LedPanel(threading.Thread):
         while self._running:
             with self.lock:
                 if self.current_state != self.last_state:
-                    print(f"run: {self.current_state}")
+                    logger.debug(f"run: {self.current_state}")
                     self.audio_player.stop_all()
 
                     current_cap = None
@@ -234,7 +237,7 @@ class LedPanel(threading.Thread):
                         self.show_red_screen()
 
                     elif self.current_state == GameStatus.SHUTDOWN:
-                        print("Led Panel shutdown")
+                        logger.debug("Led Panel shutdown")
                         break
 
                     self.last_state = self.current_state
@@ -244,9 +247,9 @@ class LedPanel(threading.Thread):
 
             cv2.waitKey(30)
 
-        print("Destroying all windows!")
+        logger.debug("Destroying all windows!")
         cv2.destroyWindow("App")
-        print("led panel exit!")
+        logger.debug("led panel exit!")
 
     def set_state(self, state):
         with self.lock:
