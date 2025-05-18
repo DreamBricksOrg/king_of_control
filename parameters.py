@@ -45,7 +45,11 @@ COUNTDOWN_VIDEO = r"images\countdown_30fps.mp4"
 GAME_VIDEO = r"images\game_30fps.mp4"
 GOAL_VIDEO = r"images\goal_30fps.mp4"
 
-LOG_FILENAME_PREFIX = "sp_hnk_reictrl"
+LOCATION = "sp"
+
+LOGS_PATH = "logs"
+STATS_LOG_FILENAME = f"{LOGS_PATH}\\hnk_reictrl_{LOCATION}.log"
+LOG_FILENAME_PREFIX = "hnk_reictrl"
 
 USE_DSHOW = True
 

@@ -15,18 +15,29 @@ from game_status import GameStatus
 import logging
 from utils import generate_timestamped_filename, ensure_directory
 
+
+# Custom filter to only allow selected INFO logs
+class StatsFilter(logging.Filter):
+    def filter(self, record):
+        return record.levelno == logging.INFO and 'STATS' in record.msg
+
+
 # Configure logging to write to a file and to the std output
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # Create a file handler and set its format and level
-LOGS_PATH = "logs"
-ensure_directory(LOGS_PATH)
-log_filename = generate_timestamped_filename(LOGS_PATH, param.LOG_FILENAME_PREFIX, "log")
+ensure_directory(param.LOGS_PATH)
+log_filename = generate_timestamped_filename(param.LOGS_PATH, param.LOG_FILENAME_PREFIX, "log")
 file_handler = logging.FileHandler(log_filename)
 file_handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(formatter)
+
+stats_handler = logging.FileHandler(param.STATS_LOG_FILENAME)
+stats_handler.setLevel(logging.INFO)
+stats_handler.addFilter(StatsFilter())  # Apply filter
+stats_handler.setFormatter(logging.Formatter('%(asctime)s: %(message)s'))
 
 # Create a stream handler and set its format and level
 stream_handler = logging.StreamHandler()
@@ -35,6 +46,7 @@ stream_handler.setFormatter(formatter)
 
 # Add the handlers to the logger
 logger.addHandler(file_handler)
+logger.addHandler(stats_handler)
 logger.addHandler(stream_handler)
 
 
@@ -253,7 +265,7 @@ class KingOfControl:
                 next_status = self.run_off()
 
             if self.game_vars.current_status != next_status:
-                logger.info(f"Status: {next_status}")
+                logger.info(f"STATS: {next_status}")
                 self.game_vars.current_status = next_status
                 self.game_vars.change_status_time = time.time()
                 self.led_panel.set_state(self.game_vars.current_status)
