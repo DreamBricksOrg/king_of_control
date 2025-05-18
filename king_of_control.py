@@ -11,6 +11,31 @@ from cv2_utils import stack_frames_vertically, draw_cross
 from hex_graph import HexGraph
 from led_panel import LedPanel
 from game_status import GameStatus
+import logging
+from utils import generate_timestamped_filename
+
+# Configure logging to write to a file and to the std output
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+# Create a file handler and set its format and level
+log_filename = generate_timestamped_filename("logs", param.LOG_FILENAME_PREFIX, "log")
+file_handler = logging.FileHandler(log_filename)
+file_handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+
+# Create a stream handler and set its format and level
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.INFO)
+stream_handler.setFormatter(formatter)
+
+# Add the handlers to the logger
+logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
+
+
+logger = logging.getLogger(__name__)
 
 
 class KingOfControl:
@@ -43,13 +68,13 @@ class KingOfControl:
         self.BLACK = (0, 0, 0)
         self.HEX_CAL_COORD = [(2, 1), (0, 1), (0, 7), (2, 7)]
 
-        print("Init Arduino")
+        logger.debug("Init Arduino")
         self.board = HexagonsBoard(port=param.ARDUINO_COM_PORT, baudrate=param.ARDUINO_BAUD_RATE)
 
-        print("Init cameras")
+        logger.debug("Init cameras")
         self.cameras = DualCamera(cam1_id=param.CAMERA1_ID, cam2_id=param.CAMERA2_ID,
                                   res1=param.CAMERA_RESOLUTION, res2=param.CAMERA_RESOLUTION)
-        print("Init Board Model")
+        logger.debug("Init Board Model")
         self.hex_model_cam1 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=(0, param.CAMERA_RESOLUTION[1]))
         self.hex_model_cam2 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=param.CAMERA_RESOLUTION)
         self.graph = HexGraph()
@@ -79,7 +104,7 @@ class KingOfControl:
         final_height = 225
         self.display_all_calibration_hexagons()
         exp1, exp2 = self.cameras.display(final_width, final_height, vertical=0)
-        print(f"Cameras exposures: {exp1} & {exp2}")
+        logger.debug(f"Cameras exposures: {exp1} & {exp2}")
 
     def calibration(self):
         #self.led_panel.set_state(GameStatus.BLANK)
@@ -111,12 +136,12 @@ class KingOfControl:
     def shutdown(self):
         self.led_panel.set_state(GameStatus.SHUTDOWN)
         self.led_panel.join()
-        print("Led Panel Thread finished")
+        logger.debug("Led Panel Thread finished")
         cv2.destroyWindow("game")
         exit(0)
 
     def run_cta(self):
-        print("Running CTA")
+        logger.debug("Running CTA")
         # waits for the player to put the ball on one of the first hexagons
 
         # update LEDs of starting hexagons
@@ -177,7 +202,7 @@ class KingOfControl:
 
     def run_game(self):
         self.game_vars.playing_time = time.time() - self.game_vars.start_time
-        print(f"Running Game: {self.game_vars.playing_time}")
+        logger.info(f"Running Game: {self.game_vars.playing_time}")
         if self.game_vars.playing_time >= param.MAX_TIME:
             self.game_vars.playing_time = param.MAX_TIME
             return GameStatus.END
@@ -191,12 +216,12 @@ class KingOfControl:
         if hex in self.game_vars.chosen_path and hex not in self.game_vars.correct:
             self.board.set_hexagon(*hex, self.GREEN)
             self.game_vars.correct.add(hex)
-            print(f"Score: {self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong), 0.0)}")
+            logger.info(f"Score: {self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong), 0.0)}")
 
         if hex and hex not in self.game_vars.chosen_path and hex not in self.game_vars.wrong:
             self.board.set_hexagon(*hex, self.RED)
             self.game_vars.wrong.add(hex)
-            print(f"Score: {self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong), 0.0)}")
+            logger.info(f"Score: {self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong), 0.0)}")
             return GameStatus.OFFSIDE
 
         composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
@@ -225,7 +250,7 @@ class KingOfControl:
                 next_status = self.run_off()
 
             if self.game_vars.current_status != next_status:
-                print(f"Status: {next_status}")
+                logger.info(f"Status: {next_status}")
                 self.game_vars.current_status = next_status
                 self.game_vars.change_status_time = time.time()
                 self.led_panel.set_state(self.game_vars.current_status)
@@ -267,11 +292,11 @@ class KingOfControl:
 
             key = cv2.waitKey(1) & 0xFF
             if key == ord('q'):
-                print("Exiting program")
+                logger.info("Exiting program")
                 self.shutdown()
             elif key == ord('b'):
                 self.game_vars.draw_ball = not self.game_vars.draw_ball
-                print(f"Draw ball: {self.game_vars.draw_ball}")
+                logger.debug(f"Draw ball: {self.game_vars.draw_ball}")
             elif key == ord('p'):
                 if self.game_vars.current_status == GameStatus.OFF:
                     self.game_vars.current_status = GameStatus.END
@@ -289,7 +314,7 @@ class KingOfControl:
 
         time_left = param.MAX_TIME - self.game_vars.playing_time
         score = self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong), time_left)
-        print(f"Score: {score}")
+        logger.debug(f"Score: {score}")
         self.led_panel.set_score_value(int(score))
         # self.led_panel.set_state()
 
@@ -361,12 +386,12 @@ class KingOfControl:
             if hex in path and hex not in correct:
                 self.board.set_hexagon(*hex, green)
                 correct.add(hex)
-                print(f"Score: {self.calculate_score(len(correct), len(wrong), 0.0)}")
+                logger.info(f"Score: {self.calculate_score(len(correct), len(wrong), 0.0)}")
 
             if hex and hex not in path and hex not in wrong:
                 self.board.set_hexagon(*hex, red)
                 wrong.add(hex)
-                print(f"Score: {self.calculate_score(len(correct), len(wrong), 0.0)}")
+                logger.info(f"Score: {self.calculate_score(len(correct), len(wrong), 0.0)}")
 
             composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
             cv2.imshow("game", composed_frame)
@@ -377,7 +402,7 @@ class KingOfControl:
         playing_time = min(time.time() - start_time, param.MAX_TIME)
         time_left = param.MAX_TIME - playing_time
         score = self.calculate_score(len(correct), len(wrong), time_left)
-        print(f"Score: {score}")
+        logger.info(f"Score: {score}")
         self.led_panel.set_score_value(int(score))
         self.led_panel.set_state(GameStatus.END)
 
@@ -477,6 +502,7 @@ class KingOfControl:
             elif key == ord('m'):
                 if winname:
                     cv2.destroyWindow(winname)
+                logger.debug("Manual calibration")
                 raise RuntimeError
             elif key == ord('q'):
                 self.shutdown()
@@ -488,7 +514,7 @@ class KingOfControl:
 
     def mouse_callback(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
-            print(f"Clicked at: ({x}, {y})")
+            #logger.debug(f"Clicked at: ({x}, {y})")
             self.clicked_point = (x, y)
 
     def open_window_user_selection(self, frame):
@@ -516,7 +542,7 @@ class KingOfControl:
         if self.clicked_point is None or len(self.clicked_point) == 0:
             return None
 
-        print("Selected point:", self.clicked_point)
+        logger.debug("Selected point:", self.clicked_point)
         return self.clicked_point[0], self.clicked_point[1], self.clicked_point[0], self.clicked_point[1]
 
     def get_calibration_points_from_mouse(self, camera_id):
@@ -548,6 +574,7 @@ class KingOfControl:
                 num_exceptions += 1
                 if num_exceptions > 5:
                     self.show_frame(frame1)
+                    logger.error(f"Erro na calibracao da camera {camera_id}")
                     raise RuntimeError(f"Erro na calibracao da camera {camera_id}")
                 time.sleep(0.3)
                 continue
@@ -594,6 +621,7 @@ class KingOfControl:
                 num_exceptions1 += 1
                 if num_exceptions1 > 5:
                     self.show_frame(frame1)
+                    logger.error(f"Erro na calibracao da camera 1")
                     raise RuntimeError(f"Erro na calibracao da camera 1")
                 time.sleep(0.3)
                 continue
@@ -606,6 +634,7 @@ class KingOfControl:
                 num_exceptions2 += 1
                 if num_exceptions2 > 5:
                     self.show_frame(frame2)
+                    logger.error(f"Erro na calibracao da camera 2")
                     raise RuntimeError(f"Erro na calibracao da camera 2")
                 time.sleep(0.3)
                 continue
@@ -658,9 +687,9 @@ class KingOfControl:
             winname = "Pressione espaco para continuar..."
             cv2.imshow(winname, composed_frame)
 
-            print(f"hexagon: {len(hexagon)}-{self.hex_model_cam1.get_avg_point(hexagon)}-{hexagon}")
-            print(f"pers_hex: {len(pers_hex)}-{self.hex_model_cam1.get_avg_point(pers_hex)}-{pers_hex}")
-            print(f"hex_coord: {hex_coord}")
+            logger.debug(f"hexagon: {len(hexagon)}-{self.hex_model_cam1.get_avg_point(hexagon)}-{hexagon}")
+            logger.debug(f"pers_hex: {len(pers_hex)}-{self.hex_model_cam1.get_avg_point(pers_hex)}-{pers_hex}")
+            logger.debug(f"hex_coord: {hex_coord}")
             self.board.set_hexagon(*hex_coord, (255, 255, 0))
             time.sleep(2)
             self.board.set_hexagon(*hex_coord, (0, 0, 0))
@@ -680,9 +709,9 @@ class KingOfControl:
         self.prev_camera1_exposure = self.cameras.init1.get_exposure()
         self.prev_camera2_exposure = self.cameras.init2.get_exposure()
 
-        print("calibrating camera 1")
+        logger.debug("calibrating camera 1")
         self.calibrate_camera_exposure(hex_detector, 1)
-        print("calibrating camera 2")
+        logger.debug("calibrating camera 2")
         self.calibrate_camera_exposure(hex_detector, 2)
 
     @staticmethod
@@ -711,11 +740,11 @@ class KingOfControl:
             boxes, avg_conf = hex_detector.detect_avg_confidence(frame, param.MIN_CONFIDENCE_HEXAGON)
             score = self.calculate_calibration_score(4, boxes, avg_conf)
             if score > best_score:
-                print(f"new best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {exposure}")
+                logger.debug(f"new best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {exposure}")
                 best_score = score
                 best_exposure = exposure
             else:
-                print(f"best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {exposure}")
+                logger.debug(f"best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {exposure}")
 
             _, _ = self.cameras.get_frames()
             cv2.waitKey(60)
@@ -729,13 +758,14 @@ class KingOfControl:
         cv2.waitKey(60)
         if camera_id == 1:
             self.cameras.init1.set_exposure(best_exposure, save=False)
-            print(f"final best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {self.cameras.init1.get_exposure()}")
+            logger.debug(f"final best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {self.cameras.init1.get_exposure()}")
         else:
             self.cameras.init2.set_exposure(best_exposure, save=False)
-            print(f"final best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {self.cameras.init2.get_exposure()}")
+            logger.debug(f"final best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {self.cameras.init2.get_exposure()}")
 
 
     def run(self):
+        logger.info("Application King of Control started (logging to file).")
         self.camera_setup()
 
         try: # automatic calibration

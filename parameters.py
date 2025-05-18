@@ -45,7 +45,9 @@ COUNTDOWN_VIDEO = r"images\countdown_30fps.mp4"
 GAME_VIDEO = r"images\game_30fps.mp4"
 GOAL_VIDEO = r"images\goal_30fps.mp4"
 
+LOG_FILENAME_PREFIX = "sp_hnk_reictrl"
+
 USE_DSHOW = True
 
 MIN_CALIBRATION_EXPOSURE = -10
-MAX_CALIBRATION_EXPOSURE = 0
+MAX_CALIBRATION_EXPOSURE = -6
