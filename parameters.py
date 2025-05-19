@@ -1,9 +1,9 @@
+from local_parameters import *
 
 CAMERA1_ID = 0
 CAMERA2_ID = 1
 CAMERA_RESOLUTION = (640, 360)
 
-ARDUINO_COM_PORT = "COM4"
 ARDUINO_BAUD_RATE = 115200
 DUMMY_ARDUINO = 0  # set to 1 to run without an Arduino
 
@@ -45,13 +45,9 @@ COUNTDOWN_VIDEO = r"images\countdown_30fps.mp4"
 GAME_VIDEO = r"images\game_30fps.mp4"
 GOAL_VIDEO = r"images\goal_30fps.mp4"
 
-LOCATION = "sp"
-
 LOGS_PATH = "logs"
 STATS_LOG_FILENAME = f"{LOGS_PATH}\\hnk_reictrl_{LOCATION}.log"
 LOG_FILENAME_PREFIX = "hnk_reictrl"
 
 USE_DSHOW = True
 
-MIN_CALIBRATION_EXPOSURE = -10
-MAX_CALIBRATION_EXPOSURE = -6
