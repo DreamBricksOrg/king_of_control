@@ -100,7 +100,7 @@ class YoloObjectDetector:
         #if best_conf < min_conf:
         #    return None
 
-        return best_box
+        return best_box, best_conf
 
     def detect_avg_confidence(self, frame: np.ndarray, min_conf=0.0):
         """
@@ -134,7 +134,7 @@ if __name__ == "__main__":
     image_path = r"images\img_calibration_01.jpg"
     detector = YoloObjectDetector(class_id=0, model_path=model)
     frame = cv2.imread(image_path)
-    best_box = detector.detect_best(frame, min_conf=0.5)
+    best_box, conf = detector.detect_best(frame, min_conf=0.5)
     #boxes = detector.detect(frame)
 
     if False:
