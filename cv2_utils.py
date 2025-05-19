@@ -1,6 +1,18 @@
 import cv2
 import numpy as np
 import logging
+from typing import Tuple, List, Union
+
+# Simple color palette (same as Ultralytics default)
+_PALETTE = np.array(
+    [
+        (220,  20,  60),  (  0, 165, 255), (  0, 255, 255), (  0, 128,   0),
+        (255, 128,   0),  (255,  51, 255), (  0,   0, 255), (255, 255,   0),
+        (255,  99,  71),  (  0, 255,  51), (255,   0,   0), (  0,  51, 255)
+    ],
+    dtype=np.uint8,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -59,3 +71,79 @@ def stack_frames_horizontally(frame1, frame2, final_width, final_height):
     composed = np.hstack((frame1_resized, frame2_resized))
 
     return composed
+
+
+def get_color(class_id: int) -> Tuple[int, int, int]:
+    """Return a distinct BGR color for a class id."""
+    return tuple(int(c) for c in _PALETTE[class_id % len(_PALETTE)])
+
+
+def draw_yolo_box(
+    img: np.ndarray,
+    box: Union[List[int], Tuple[int, int, int, int]],
+    label: str = "",
+    conf: float = None,
+    class_id: int = 0,
+    thickness: int = 2,
+):
+    """
+    Draw a YOLO‑style bounding box with label and confidence on `img`.
+
+    Args:
+        img:        BGR image (modified in place).
+        box:        (x1, y1, x2, y2) corner coordinates.
+        label:      Class name to display.
+        conf:       Confidence (0‑1) – optional.
+        class_id:   Used only for color selection.
+        thickness:  Rectangle thickness.
+    """
+    x1, y1, x2, y2 = map(int, box)
+    color = get_color(class_id)
+
+    # Draw rectangle
+    cv2.rectangle(img, (x1, y1), (x2, y2), color, thickness)
+
+    # Compose label text
+    if conf is not None:
+        text = f"{label} {conf:.2f}" if label else f"{conf:.2f}"
+    else:
+        text = label
+
+    if text:
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.5
+        txt_th = 1
+
+        # Text size
+        (tw, th), _ = cv2.getTextSize(text, font, font_scale, txt_th)
+        th += 3  # a bit of padding
+
+        # Label background (filled rectangle)
+        cv2.rectangle(img, (x1, y1 - th), (x1 + tw, y1), color, -1)
+
+        # Put text (white)
+        cv2.putText(
+            img,
+            text,
+            (x1, y1 - 2),
+            font,
+            font_scale,
+            (255, 255, 255),
+            txt_th,
+            lineType=cv2.LINE_AA,
+        )
+
+
+if __name__ == "__main__":
+    img = cv2.imread(r"images/img_calibration_01.jpg")  # your image here
+    boxes = [
+        ([50, 40, 200, 180], "cat", 0.92, 0),
+        ([250, 60, 400, 200], "dog", 0.88, 1),
+    ]
+
+    for b, lbl, cf, cid in boxes:
+        draw_yolo_box(img, b, label=lbl, conf=cf, class_id=cid)
+
+    cv2.imshow("YOLO‑style boxes", img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
