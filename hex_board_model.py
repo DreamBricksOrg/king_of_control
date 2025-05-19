@@ -33,10 +33,11 @@ class HexBoardModel:
         #ball_pos = (x1, y2)
         ball_pos = self.ellipse_line_intersection(ball_bbox, self.cam_pos)
 
-        return self.find_polygon_contains_point(self.pers_polygons, ball_pos)
+        idx, enabled_polygon = self.find_polygon_contains_point(self.pers_polygons, ball_pos)
+        return idx, enabled_polygon, ball_pos
 
     def get_hex_under_ball(self, ball_bbox):
-        idx, enabled_polygon = self.get_polygon_under_ball(ball_bbox)
+        idx, enabled_polygon, _ = self.get_polygon_under_ball(ball_bbox)
         if enabled_polygon is None:
             return None
 
