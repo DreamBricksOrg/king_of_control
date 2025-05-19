@@ -8,7 +8,7 @@ from hex_board_model import HexBoardModel
 from yolo_object_detector import YoloObjectDetector
 from dual_camera import DualCamera
 import time
-from cv2_utils import stack_frames_vertically, draw_cross
+from cv2_utils import stack_frames_vertically, draw_cross, draw_yolo_box
 from hex_graph import HexGraph
 from led_panel import LedPanel
 from game_status import GameStatus
@@ -430,31 +430,25 @@ class KingOfControl:
     def get_hex_under_ball(self, ball_detector, update_frames=True):
         frame1, frame2 = self.cameras.get_frames()
 
-        bbox1 = ball_detector.detect_best(frame1, param.MIN_CONFIDENCE_BALL)
+        bbox1, conf = ball_detector.detect_best(frame1, param.MIN_CONFIDENCE_BALL)
+        bbox2 = None
 
         hex = None
+        cam_used = 0
+        hexagon = None
+        ball_pos = (0, 0)
         if bbox1 is not None:
-            idx, enabled_polygon = self.hex_model_cam1.get_polygon_under_ball(bbox1)
-
-            if self.game_vars.draw_ball:
-                label = "Ball"
-                x1, y1, x2, y2 = bbox1
-                cv2.rectangle(frame1, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
-                cv2.putText(frame1, label, (int(x1), int(y1) - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            idx, enabled_polygon, ball_pos = self.hex_model_cam1.get_polygon_under_ball(bbox1)
 
             if enabled_polygon:
                 hex = self.hex_model_cam1.hex_coordinates[idx]
                 hexagon = self.hex_model_cam1.pers_polygons[idx]
+                cam_used = 1
 
-                if update_frames:
-                    self.hex_model_cam1.draw_hexagons(frame1, color=(100, 100, 100))
-                    self.hex_model_cam1.draw_polylines(frame1, hexagon, color=(0, 255, 255))
-                    # hex = self.hex_model_cam1.get_hex_under_ball(bbox1)
         else:
-            bbox2 = ball_detector.detect_best(frame2, param.MIN_CONFIDENCE_BALL)
+            bbox2, conf = ball_detector.detect_best(frame2, param.MIN_CONFIDENCE_BALL)
             if bbox2 is not None:
-                idx, enabled_polygon = self.hex_model_cam2.get_polygon_under_ball(bbox2)
+                idx, enabled_polygon, ball_pos = self.hex_model_cam2.get_polygon_under_ball(bbox2)
 
                 if self.game_vars.draw_ball:
                     label = "Ball"
@@ -466,11 +460,23 @@ class KingOfControl:
                 if enabled_polygon:
                     hex = self.hex_model_cam2.hex_coordinates[idx]
                     hexagon = self.hex_model_cam2.pers_polygons[idx]
+                    cam_used = 2
 
-                    if update_frames:
-                        self.hex_model_cam2.draw_hexagons(frame2, color=(100, 100, 100))
-                        self.hex_model_cam2.draw_polylines(frame2, hexagon, color=(0, 255, 255))
-                        # hex = self.hex_model_cam2.get_hex_under_ball(bbox2)
+        if update_frames:
+            self.hex_model_cam1.draw_hexagons(frame1, color=(200, 100, 100))
+            self.hex_model_cam2.draw_hexagons(frame2, color=(200, 100, 100))
+
+            if cam_used == 1:
+                self.hex_model_cam1.draw_polylines(frame1, hexagon, color=(0, 255, 255))
+                if self.game_vars.draw_ball:
+                    draw_yolo_box(frame1, box=bbox1, label="Ball", conf=conf)
+                    draw_cross(frame1, ball_pos, color=(255, 255, 0))
+
+            elif cam_used == 2:
+                self.hex_model_cam2.draw_polylines(frame2, hexagon, color=(0, 255, 255))
+                if self.game_vars.draw_ball:
+                    draw_yolo_box(frame2, box=bbox2, label="Ball", conf=conf)
+                    draw_cross(frame2, ball_pos, color=(255, 255, 0))
 
         return hex, frame1, frame2
 
@@ -631,7 +637,7 @@ class KingOfControl:
             results1 = None
 
             # find it in both cameras
-            bbox1 = yolo_object_detector.detect_best(frame1, param.MIN_CONFIDENCE_HEXAGON)
+            bbox1, conf = yolo_object_detector.detect_best(frame1, param.MIN_CONFIDENCE_HEXAGON)
             if bbox1 is None:
                 num_exceptions1 += 1
                 if num_exceptions1 > 5:
@@ -644,7 +650,7 @@ class KingOfControl:
             if debug_calibration:
                 results1 = yolo_object_detector.get_last_results()
 
-            bbox2 = yolo_object_detector.detect_best(frame2, param.MIN_CONFIDENCE_HEXAGON)
+            bbox2, conf = yolo_object_detector.detect_best(frame2, param.MIN_CONFIDENCE_HEXAGON)
             if bbox2 is None:
                 num_exceptions2 += 1
                 if num_exceptions2 > 5:
