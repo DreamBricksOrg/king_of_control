@@ -1,5 +1,7 @@
 import copy
 import traceback
+import json
+from typing import List, Tuple
 
 import cv2
 import parameters as param
@@ -118,8 +120,16 @@ class KingOfControl:
         final_width = 800
         final_height = 225
         self.display_all_calibration_hexagons()
-        exp1, exp2 = self.cameras.display(final_width, final_height, vertical=0)
+        exp1, exp2, key = self.cameras.display(final_width, final_height, vertical=0)
         logger.debug(f"Cameras exposures: {exp1} & {exp2}")
+
+        if key == ord('r'):
+            floor_quad1, floor_quad2 = self.load_floor_quads(param.CALIBRATION_FILE)
+            self.hex_model_cam1.set_calibration_points(floor_quad1)
+            self.hex_model_cam2.set_calibration_points(floor_quad2)
+            return True
+
+        return False
 
     def calibration(self):
         #self.led_panel.set_state(GameStatus.BLANK)
@@ -132,6 +142,8 @@ class KingOfControl:
 
         self.hex_model_cam1.set_calibration_points(floor_quad1)
         self.hex_model_cam2.set_calibration_points(floor_quad2)
+
+        self.save_floor_quads(param.CALIBRATION_FILE, floor_quad1, floor_quad2)
 
         # restore game brightness
         self.cameras.init1.set_exposure(self.prev_camera1_exposure)
@@ -147,6 +159,8 @@ class KingOfControl:
 
         self.hex_model_cam1.set_calibration_points(floor_quad1)
         self.hex_model_cam2.set_calibration_points(floor_quad2)
+
+        self.save_floor_quads(param.CALIBRATION_FILE, floor_quad1, floor_quad2)
 
     def shutdown(self):
         self.led_panel.set_state(GameStatus.SHUTDOWN)
@@ -678,6 +692,22 @@ class KingOfControl:
 
         return floor_quad1, floor_quad2
 
+
+    @staticmethod
+    def save_floor_quads(file_path: str, floor_quad1: List[int], floor_quad2: List[int]) -> None:
+        data = {
+            "floor_quad1": floor_quad1,
+            "floor_quad2": floor_quad2
+        }
+        with open(file_path, 'w') as f:
+            json.dump(data, f, indent=2)
+
+    @staticmethod
+    def load_floor_quads(file_path: str) -> Tuple[List[int], List[int]]:
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+        return data["floor_quad1"], data["floor_quad2"]
+
     @staticmethod
     def show_frame(frame, winname="Pressione espaco para continuar..."):
         while True:
@@ -779,23 +809,24 @@ class KingOfControl:
             self.cameras.init2.set_exposure(best_exposure, save=False)
             logger.debug(f"final best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {self.cameras.init2.get_exposure()}")
 
-
     def run(self):
         try:
-            self.camera_setup()
+            calibration_loaded = self.camera_setup()
 
-            try: # automatic calibration
-                self.calibration_auto_exposure()
-                self.calibration()
-                self.calibration_debug()
-            except RuntimeError:
-                while True:
-                    try:
-                        self.manual_calibration()
-                        self.calibration_debug()
-                        break
-                    except RuntimeError:
-                        pass
+            if not calibration_loaded:
+                try: # automatic calibration
+                    self.calibration_auto_exposure()
+                    self.calibration()
+                    self.calibration_debug()
+                except RuntimeError:
+                    while True:
+                        try:
+                            self.manual_calibration()
+                            self.calibration_debug()
+                            break
+                        except RuntimeError:
+                            pass
+
             self.led_panel.start()
             self.game()
         except Exception as e:

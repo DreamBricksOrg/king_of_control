@@ -49,5 +49,7 @@ LOGS_PATH = "logs"
 STATS_LOG_FILENAME = f"{LOGS_PATH}\\hnk_reictrl_{LOCATION}.log"
 LOG_FILENAME_PREFIX = "hnk_reictrl"
 
+CALIBRATION_FILE = "calibration.json"
+
 USE_DSHOW = True
 

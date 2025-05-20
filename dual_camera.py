@@ -84,6 +84,9 @@ class DualCamera:
             if key == ord(' '):
                 cv2.destroyWindow(window_title)
                 break
+            elif key == ord('r'):
+                    cv2.destroyWindow(window_title)
+                    break
             elif key == ord('a'):
                 self.init1.set_exposure(self.init1.get_exposure()-1)
             elif key == ord('s'):
@@ -93,7 +96,7 @@ class DualCamera:
             elif key == ord('x'):
                 self.init2.set_exposure(self.init2.get_exposure()+1)
 
-        return self.init1.get_exposure(), self.init2.get_exposure()
+        return self.init1.get_exposure(), self.init2.get_exposure(), key
 
     def release(self):
         if self.cam1.isOpened():

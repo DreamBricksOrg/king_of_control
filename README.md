@@ -2,7 +2,7 @@ Codigo para controle de um jogo de controle de bola em um campo com hexagonos qu
 
 
 TO DO:
-1. Salvar pontos de calibração;
+1. Arquivo app.py para chamar o jogo;
 2. Melhorar ponto calculado de base da bola;
 3. Recalibracao sem necessidade de reinicar o jogo; 
 4. Mostrar frames quando for impedimento;
@@ -17,3 +17,4 @@ Done:
 * Arquivos separados de parameters;
 * Mostrar ponto calculado de base da bola;
 * Sempre mostrar projecao dos hexagonos nas duas cameras;
+* Salvar pontos de calibração;
