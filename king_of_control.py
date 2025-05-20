@@ -92,8 +92,8 @@ class KingOfControl:
         self.cameras = DualCamera(cam1_id=param.CAMERA1_ID, cam2_id=param.CAMERA2_ID,
                                   res1=param.CAMERA_RESOLUTION, res2=param.CAMERA_RESOLUTION)
         logger.debug("Init Board Model")
-        self.hex_model_cam1 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=(0, param.CAMERA_RESOLUTION[1]))
-        self.hex_model_cam2 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=param.CAMERA_RESOLUTION)
+        self.hex_model_cam1 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=(0, param.CAMERA_RESOLUTION[1]*2))
+        self.hex_model_cam2 = HexBoardModel(param.HEXAGONS_SVG_FILE, center_offset=param.HEXAGONS_SVG_OFFSET, cam_pos=(param.CAMERA_RESOLUTION[0]*2, param.CAMERA_RESOLUTION[1]*2))
         self.graph = HexGraph()
         self.led_panel = LedPanel(
             state_play_duration=param.MAX_TIME,

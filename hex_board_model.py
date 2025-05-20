@@ -224,15 +224,29 @@ class HexBoardModel:
         return result
 
     @staticmethod
-    def ellipse_line_intersection(bbox, external_point):
+    def distance(x1, y1, x2, y2):
+        return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+
+    @staticmethod
+    def dynamic_radius_scale(dist):
+        #return dist * 0.000875 - 0.085
+        return dist * 0.00125 - 0.55
+
+    def ellipse_line_intersection(self, bbox, external_point):
         x_min, y_min, x_max, y_max = bbox
         px, py = external_point
 
-        # Compute ellipse center and radii
+        # Compute ellipse center
         cx = (x_min + x_max) / 2
         cy = (y_min + y_max) / 2
-        rx = (x_max - x_min) / 2
-        ry = (y_max - y_min) / 2
+
+        radius_scale = self.dynamic_radius_scale(self.distance(px, py, cx, cy))
+
+        # Compute radii
+        rx = (x_max - x_min) / 2 * radius_scale
+        ry = (y_max - y_min) / 2 * radius_scale
+
+        #logger.info(f"Distance: {self.distance(cx, cy, px, py)}, radius_scale: {radius_scale}")
 
         # Direction vector from center to point
         dx = px - cx
