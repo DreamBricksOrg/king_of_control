@@ -2,13 +2,13 @@ Codigo para controle de um jogo de controle de bola em um campo com hexagonos qu
 
 
 TO DO:
-1. Arquivo app.py para chamar o jogo;
+1. Logs no servidor de logs;
 2. Treinar bola com modelo maior;
-3. Recalibracao sem necessidade de reinicar o jogo; 
-4. Mostrar frames quando for impedimento;
-5. Logs no servidor de logs;
-6. Modo de rastrear a bola no tablado;
-7. Modo jogo com pontos;
+3. Mostrar frames quando for impedimento;
+4. Recalibracao sem necessidade de reinicar o jogo; 
+5. Modo de rastrear a bola no tablado;
+6. Modo jogo com pontos;
+7. Arquivo app.py para chamar o jogo;
 
 Done:
 
