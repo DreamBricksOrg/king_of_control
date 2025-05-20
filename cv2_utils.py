@@ -28,7 +28,8 @@ def draw_cross(frame, center, size=10, color=(0, 255, 0), thickness=2):
         color (tuple): BGR color (default: green).
         thickness (int): Line thickness.
     """
-    x, y = center
+    x, y = int(center[0]), int(center[1])
+
     # Draw horizontal line
     cv2.line(frame, (x - size, y), (x + size, y), color, thickness)
     # Draw vertical line
@@ -144,6 +145,7 @@ if __name__ == "__main__":
     for b, lbl, cf, cid in boxes:
         draw_yolo_box(img, b, label=lbl, conf=cf, class_id=cid)
 
+    draw_cross(img, (70.5, 70))
     cv2.imshow("YOLO‑style boxes", img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()

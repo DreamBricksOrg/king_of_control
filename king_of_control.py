@@ -439,41 +439,36 @@ class KingOfControl:
         ball_pos = (0, 0)
         if bbox1 is not None:
             idx, enabled_polygon, ball_pos = self.hex_model_cam1.get_polygon_under_ball(bbox1)
+            cam_used = 1
 
             if enabled_polygon:
                 hex = self.hex_model_cam1.hex_coordinates[idx]
                 hexagon = self.hex_model_cam1.pers_polygons[idx]
-                cam_used = 1
 
         else:
             bbox2, conf = ball_detector.detect_best(frame2, param.MIN_CONFIDENCE_BALL)
             if bbox2 is not None:
                 idx, enabled_polygon, ball_pos = self.hex_model_cam2.get_polygon_under_ball(bbox2)
-
-                if self.game_vars.draw_ball:
-                    label = "Ball"
-                    x1, y1, x2, y2 = bbox2
-                    cv2.rectangle(frame2, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
-                    cv2.putText(frame2, label, (int(x1), int(y1) - 10),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                cam_used = 2
 
                 if enabled_polygon:
                     hex = self.hex_model_cam2.hex_coordinates[idx]
                     hexagon = self.hex_model_cam2.pers_polygons[idx]
-                    cam_used = 2
 
         if update_frames:
             self.hex_model_cam1.draw_hexagons(frame1, color=(200, 100, 100))
             self.hex_model_cam2.draw_hexagons(frame2, color=(200, 100, 100))
 
             if cam_used == 1:
-                self.hex_model_cam1.draw_polylines(frame1, hexagon, color=(0, 255, 255))
+                if hexagon is not None:
+                    self.hex_model_cam1.draw_polylines(frame1, hexagon, color=(0, 255, 255))
                 if self.game_vars.draw_ball:
                     draw_yolo_box(frame1, box=bbox1, label="Ball", conf=conf)
                     draw_cross(frame1, ball_pos, color=(255, 255, 0))
 
             elif cam_used == 2:
-                self.hex_model_cam2.draw_polylines(frame2, hexagon, color=(0, 255, 255))
+                if hexagon is not None:
+                    self.hex_model_cam2.draw_polylines(frame2, hexagon, color=(0, 255, 255))
                 if self.game_vars.draw_ball:
                     draw_yolo_box(frame2, box=bbox2, label="Ball", conf=conf)
                     draw_cross(frame2, ball_pos, color=(255, 255, 0))
