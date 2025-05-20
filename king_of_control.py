@@ -145,14 +145,10 @@ class KingOfControl:
 
         self.save_floor_quads(param.CALIBRATION_FILE, floor_quad1, floor_quad2)
 
-        # restore game brightness
-        self.cameras.init1.set_exposure(self.prev_camera1_exposure)
-        self.cameras.init2.set_exposure(self.prev_camera2_exposure)
+        self.restore_game_brightness()
 
     def manual_calibration(self):
-        # restore game brightness
-        self.cameras.init1.set_exposure(self.prev_camera1_exposure)
-        self.cameras.init2.set_exposure(self.prev_camera2_exposure)
+        self.restore_game_brightness()
 
         floor_quad1 = self.get_calibration_points_from_mouse(1)
         floor_quad2 = self.get_calibration_points_from_mouse(2)
@@ -745,15 +741,23 @@ class KingOfControl:
                 cv2.destroyWindow(winname)
                 break
 
+    def store_game_brightness(self):
+        # store game brightness
+        self.prev_camera1_exposure = self.cameras.init1.get_exposure()
+        self.prev_camera2_exposure = self.cameras.init2.get_exposure()
+
+    def restore_game_brightness(self):
+        # restore game brightness
+        self.cameras.init1.set_exposure(self.prev_camera1_exposure)
+        self.cameras.init2.set_exposure(self.prev_camera2_exposure)
+
     def calibration_auto_exposure(self):
         self.display_all_calibration_hexagons()
         self.led_panel.show_calibration_screen()
 
         hex_detector = YoloObjectDetector(class_id=0, model_path=param.YOLO_MODEL_HEXAGON)
 
-        # store game brightness
-        self.prev_camera1_exposure = self.cameras.init1.get_exposure()
-        self.prev_camera2_exposure = self.cameras.init2.get_exposure()
+        self.store_game_brightness()
 
         logger.debug("calibrating camera 1")
         self.calibrate_camera_exposure(hex_detector, 1)
