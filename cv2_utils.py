@@ -135,6 +135,27 @@ def draw_yolo_box(
         )
 
 
+def put_text_centered(img, text, center, font=cv2.FONT_HERSHEY_SIMPLEX,
+                      font_scale=1.0, color=(0, 0, 0), thickness=2, line_type=cv2.LINE_AA):
+    """
+    Draws text centered at the given (x, y) coordinate on the image.
+
+    Parameters:
+        img: The image (NumPy array).
+        text: Text string to draw.
+        center: Tuple (x, y) specifying the center point.
+        font: OpenCV font (default: FONT_HERSHEY_SIMPLEX).
+        font_scale: Font scale factor.
+        color: Text color (B, G, R).
+        thickness: Thickness of the text strokes.
+        line_type: Type of the line (default: cv2.LINE_AA).
+    """
+    (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale, thickness)
+    x = int(center[0] - text_width / 2)
+    y = int(center[1] + text_height / 2)
+    cv2.putText(img, text, (x, y), font, font_scale, color, thickness, line_type)
+
+
 if __name__ == "__main__":
     img = cv2.imread(r"images/img_calibration_01.jpg")  # your image here
     boxes = [

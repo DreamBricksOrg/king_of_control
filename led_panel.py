@@ -1,3 +1,4 @@
+import copy
 import cv2
 import numpy as np
 import time
@@ -7,6 +8,7 @@ from audio_player import AudioPlayer
 import threading
 from game_status import GameStatus
 import logging
+from cv2_utils import put_text_centered
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +26,7 @@ class LedPanel(threading.Thread):
                  cta_image=None,
                  offside_image=None,
                  endgame_image=None,
+                 score_endgame_image=None,
                  off_image=None,
                  game_audio=None,
                  end_audio=None,
@@ -57,6 +60,7 @@ class LedPanel(threading.Thread):
         self.cta_image = self.load_background_image(cta_image)
         self.offside_image = self.load_background_image(offside_image)
         self.endgame_image = self.load_background_image(endgame_image)
+        self.score_endgame_image = self.load_background_image(score_endgame_image)
         self.off_image = self.load_background_image(off_image)
 
         self.countdown_cap = cv2.VideoCapture(countdown_video_path)
@@ -67,9 +71,12 @@ class LedPanel(threading.Thread):
 
         self.audio_player = AudioPlayer()
 
-        self.play_start_time = None
-        self.score_start_time = None
-        self.score_value = None
+        self.show_score = False
+        self.score_value = 0
+        self.playing_time = 0.0
+        self.num_correct = 0
+        self.num_wrong = 0
+        self.num_goal = 0
 
         self.game_audio = game_audio
         self.end_audio = end_audio
@@ -140,14 +147,24 @@ class LedPanel(threading.Thread):
     def show_screen(self, image, title="App"):
         cv2.imshow(title, image)
 
-    def show_score_screen(self):
-        img = self.background_image.copy()
-        text = f"{self.score_value}"
+    def set_score_values(self, score, playing_time, correct, wrong, goal):
+        self.show_score = True
+        self.score_value = score
+        self.playing_time = playing_time
+        self.num_correct = correct
+        self.num_wrong = wrong
+        self.num_goal = goal
 
-        img = self.display_text_centered(img, "SCORE:", 24, offset=(-150, -60))
-        img = self.display_text_centered(img, "PTS", 24, offset=(60, 50))
-        img = self.display_text_centered(img, text, self.FONT_SIZE, offset=(-150, -15))
-        cv2.imshow("App", img)
+    def show_score_screen(self):
+        img = copy.deepcopy(self.score_endgame_image)
+        font = cv2.FONT_HERSHEY_TRIPLEX
+
+        put_text_centered(img, f"{self.score_value}", (973, 58), font, 2.2, (255, 255, 255), 2)
+        cv2.putText(img, f"{self.playing_time:.2f}s", (1418, 59), font, 1.2, (255, 255, 255), 2)
+        cv2.putText(img, f"{self.num_correct}", (1418, 114), font, 1.2, (255, 255, 255), 2)
+        cv2.putText(img, f"{self.num_wrong}", (1418, 171), font, 1.2, (255, 255, 255), 2)
+        cv2.putText(img, f"{self.num_goal}", (1418, 229), font, 1.2, (255, 255, 255), 2)
+        self.show_screen(img)
 
     def display_text_centered(self, img, text, font_size, offset=(0, 0)):
         try:
@@ -226,7 +243,10 @@ class LedPanel(threading.Thread):
 
                     elif self.current_state == GameStatus.END:
                         self.audio_player.play_once(self.end_audio)
-                        self.show_screen(self.endgame_image)
+                        if self.show_score:
+                            self.show_score_screen()
+                        else:
+                            self.show_screen(self.endgame_image)
 
                     elif self.current_state == GameStatus.OFF:
                         self.audio_player.stop_all()
@@ -271,6 +291,7 @@ if __name__ == "__main__":
         cta_image=param.CTA_IMAGE,
         offside_image=param.OFFSIDE_IMAGE,
         endgame_image=param.END_IMAGE,
+        score_endgame_image=param.SCORE_END_IMAGE,
         game_audio=param.GAME_AUDIO,
         cta_audio=param.CTA_AUDIO,
         goal_audio=param.GOAL_AUDIO,

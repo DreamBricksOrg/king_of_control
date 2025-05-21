@@ -11,7 +11,7 @@ from hex_board_model import HexBoardModel
 from yolo_object_detector import YoloObjectDetector
 from dual_camera import DualCamera
 import time
-from cv2_utils import stack_frames_vertically, stack_frames_horizontally, draw_cross, draw_yolo_box
+from cv2_utils import stack_frames_vertically, stack_frames_horizontally, draw_cross, draw_yolo_box, put_text_centered
 from hex_graph import HexGraph
 from led_panel import LedPanel
 from game_status import GameStatus
@@ -70,6 +70,7 @@ class KingOfControl:
             self.chosen_path = None
             self.correct = set()
             self.wrong = set()
+            self.goal = 0
             self.current_status = GameStatus.BLANK
             self.draw_ball = True
 
@@ -109,6 +110,7 @@ class KingOfControl:
             cta_image=param.CTA_IMAGE,
             offside_image=param.OFFSIDE_IMAGE,
             endgame_image=param.END_IMAGE,
+            score_endgame_image=param.SCORE_END_IMAGE,
             game_audio=param.GAME_AUDIO,
             cta_audio=param.CTA_AUDIO,
             goal_audio=param.GOAL_AUDIO,
@@ -122,7 +124,12 @@ class KingOfControl:
         self.prev_camera1_exposure = 0
         self.prev_camera2_exposure = 0
         self.show_cameras_vertically = True
-        self.game_mode = param.GAME_MODE
+        if param.GAME_MODE == 0:
+            self.game_mode = self.GameMode.NORMAL
+        elif param.GAME_MODE == 1:
+            self.game_mode = self.GameMode.TRACK
+        elif param.GAME_MODE == 2:
+            self.game_mode = self.GameMode.POINTS
 
     def camera_setup(self):
         final_width = 800
@@ -241,7 +248,7 @@ class KingOfControl:
     def run_off(self):
         return GameStatus.OFF
 
-    def run_game(self):
+    def run_game(self, offside_enabled=True):
         self.game_vars.playing_time = time.time() - self.game_vars.start_time
         logger.info(f"Running Game: {self.game_vars.playing_time}")
         if self.game_vars.playing_time >= param.MAX_TIME:
@@ -257,17 +264,19 @@ class KingOfControl:
         if hex in self.game_vars.chosen_path and hex not in self.game_vars.correct:
             self.board.set_hexagon(*hex, self.GREEN)
             self.game_vars.correct.add(hex)
-            logger.info(f"Score: {self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong), 0.0)}")
+            logger.info(f"Score: {self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong), 0, 0.0)}")
 
         if hex and hex not in self.game_vars.chosen_path and hex not in self.game_vars.wrong:
             self.board.set_hexagon(*hex, self.RED)
             self.game_vars.wrong.add(hex)
-            logger.info(f"Score: {self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong), 0.0)}")
-            return GameStatus.OFFSIDE
+            logger.info(f"Score: {self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong), 0, 0.0)}")
+            if offside_enabled:
+                return GameStatus.OFFSIDE
 
         return GameStatus.GAME
 
     def game(self):
+        offside_enabled = self.game_mode == self.GameMode.NORMAL
 
         self.game_vars.current_status = GameStatus.BLANK
         next_status = GameStatus.CTA
@@ -277,7 +286,7 @@ class KingOfControl:
             elif self.game_vars.current_status == GameStatus.COUNTDOWN:
                 next_status = self.run_countdown()
             elif self.game_vars.current_status == GameStatus.GAME:
-                next_status = self.run_game()
+                next_status = self.run_game(offside_enabled=offside_enabled)
             elif self.game_vars.current_status == GameStatus.GOAL:
                 next_status = self.run_goal()
             elif self.game_vars.current_status == GameStatus.OFFSIDE:
@@ -315,8 +324,11 @@ class KingOfControl:
                     self.game_vars.start_time = time.time()
                     self.game_vars.correct = set()
                     self.game_vars.wrong = set()
+                    self.game_vars.goal = 0
 
                 elif self.game_vars.current_status == GameStatus.GOAL:
+                    self.game_vars.playing_time = min(time.time() - self.game_vars.start_time, param.MAX_TIME)
+                    self.game_vars.goal = 1
                     self.board.set_goal(self.GREEN)
 
                 elif self.game_vars.current_status == GameStatus.OFFSIDE:
@@ -324,6 +336,20 @@ class KingOfControl:
 
                 elif self.game_vars.current_status == GameStatus.END:
                     self.board.set_goal(self.RED)
+                    if self.game_mode == self.GameMode.NORMAL:
+                        self.led_panel.show_score = False
+                    else:
+                        if self.game_vars.goal == 0:
+                            self.game_vars.playing_time = min(time.time() - self.game_vars.start_time, param.MAX_TIME)
+                        time_left = param.MAX_TIME - self.game_vars.playing_time
+                        score = self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong),
+                                                     self.game_vars.goal, time_left)
+                        logger.info(
+                            f"Score: {score}, Time: {self.game_vars.playing_time}, Correct: {len(self.game_vars.correct)}, Wrong: {len(self.game_vars.wrong)}, Goal: {self.game_vars.goal}")
+                        self.led_panel.set_score_values(int(score), self.game_vars.playing_time,
+                                                        len(self.game_vars.correct), len(self.game_vars.wrong),
+                                                        self.game_vars.goal)
+
 
                 elif self.game_vars.current_status == GameStatus.OFF:
                     self.board.clear()
@@ -331,99 +357,12 @@ class KingOfControl:
             key = cv2.waitKey(1) & 0xFF
             self.process_key_press(key)
 
-    def game_db(self):
-        white = (255, 255, 255)
-        red = (255, 0, 0)
-        green = (0, 255, 0)
-        ball_detector = self.game_vars.ball_detector  # YoloObjectDetector(class_id=param.YOLO_MODEL_BALL_ID, model_path=param.YOLO_MODEL_BALL)
-
-        paths = [self.graph.create_random_path_target_size(0, param.TARGET_PATH_SIZE),
-                 self.graph.create_random_path_target_size(1, param.TARGET_PATH_SIZE)]
-        chosen_path = 0
-
-        # waits for the player to put the ball on one of the first hexagons
-        brightness = 0
-        direction = 10
-        self.board.clear()
-        self.led_panel.set_state(GameStatus.CTA)
-        while True:
-            # update LEDs of starting hexagons
-            brightness += direction
-            if brightness >= 255:
-                brightness = 255
-                direction = -direction
-            elif brightness <= 0:
-                brightness = 0
-                direction = -direction
-
-            self.board.set_hexagon(0, 0, (brightness, brightness, brightness))
-            self.board.set_hexagon(1, 0, (brightness, brightness, brightness))
-
-            hex, frame1, frame2 = self.get_hex_under_ball(ball_detector)
-
-            composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
-            cv2.imshow("game", composed_frame)
-
-            # put the ball in one the starting hexagons
-            if hex and hex[1] == 0:
-                chosen_path = paths[hex[0]]
-                break
-
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                cv2.destroyAllWindows()
-                exit(0)
-
-        # shows the path
-        self.board.clear()
-        for node in chosen_path:
-            self.board.set_hexagon(*node, white)
-
-
-        # game starts
-        start_time = time.time()
-        self.led_panel.set_state(GameStatus.GAME)
-        path = set(chosen_path)
-        correct = set()
-        wrong = set()
-        while True:
-            playing_time = time.time() - start_time
-            if playing_time > param.MAX_TIME:
-                break
-
-            hex, frame1, frame2 = self.get_hex_under_ball(ball_detector)
-
-            # if goal
-            if hex and hex[1] == 8:
-                break
-
-            if hex in path and hex not in correct:
-                self.board.set_hexagon(*hex, green)
-                correct.add(hex)
-                logger.info(f"Score: {self.calculate_score(len(correct), len(wrong), 0.0)}")
-
-            if hex and hex not in path and hex not in wrong:
-                self.board.set_hexagon(*hex, red)
-                wrong.add(hex)
-                logger.info(f"Score: {self.calculate_score(len(correct), len(wrong), 0.0)}")
-
-            composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
-            cv2.imshow("game", composed_frame)
-
-            # if hex and hex[1] == 7:
-            #    break
-
-        playing_time = min(time.time() - start_time, param.MAX_TIME)
-        time_left = param.MAX_TIME - playing_time
-        score = self.calculate_score(len(correct), len(wrong), time_left)
-        logger.info(f"Score: {score}")
-        self.led_panel.set_score_value(int(score))
-        self.led_panel.set_state(GameStatus.END)
-
     @staticmethod
-    def calculate_score(num_correct, num_wrong, time_left):
+    def calculate_score(num_correct, num_wrong, goal, time_left):
         return time_left * param.TIME_SCORE + \
             num_correct * param.HEX_CORRECT_SCORE + \
-            num_wrong * param.HEX_WRONG_SCORE
+            num_wrong * param.HEX_WRONG_SCORE + \
+            goal * param.GOAL_SCORE
 
     def get_hex_under_ball(self, ball_detector, update_frames=True):
         frame1, frame2 = self.cameras.get_frames()
@@ -505,6 +444,7 @@ class KingOfControl:
             self.game_vars.current_status = GameStatus.END
 
     def track_ball(self):
+        self.board.clear()
         last_hex = None
         while True:
             hex = self.get_hex_under_ball_and_show_cameras()
@@ -848,12 +788,10 @@ class KingOfControl:
 
             self.led_panel.start()
 
-            if self.game_mode == self.GameMode.NORMAL:
+            if self.game_mode == self.GameMode.NORMAL or self.game_mode == self.GameMode.POINTS:
                 self.game()
             elif self.game_mode == self.GameMode.TRACK:
                 self.track_ball()
-            elif self.game_mode == self.GameMode.POINTS:
-                self.game_db()
 
         except Exception as e:
             logger.critical(f"Error: {e}\n{traceback.format_exc()}")

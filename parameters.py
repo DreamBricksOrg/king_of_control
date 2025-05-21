@@ -27,9 +27,10 @@ GOAL_TIME = 8
 OFFSIDE_TIME = 3
 
 TARGET_PATH_SIZE = 9
-TIME_SCORE = 100   # points per second
-HEX_CORRECT_SCORE = 500
-HEX_WRONG_SCORE = -1000
+TIME_SCORE = 500   # points per second
+HEX_CORRECT_SCORE = 300
+HEX_WRONG_SCORE = -700
+GOAL_SCORE = 1000
 
 GAME_AUDIO = "torcida"
 END_AUDIO = "3apitos"
@@ -41,6 +42,7 @@ COUNTDOWN_AUDIO = "countdown"
 OFFSIDE_IMAGE = r"images\offside.png"
 CTA_IMAGE = r"images\cta.png"
 END_IMAGE = r"images\end_game.png"
+SCORE_END_IMAGE = r"images\end_game_points.png"
 OFF_IMAGE = r"images\off.png"
 
 COUNTDOWN_VIDEO = r"images\countdown_30fps.mp4"
