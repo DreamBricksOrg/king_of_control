@@ -18,3 +18,4 @@ Done:
 * Sempre mostrar projecao dos hexagonos nas duas cameras;
 * Salvar pontos de calibração;
 * Melhorar ponto calculado de base da bola;
+* Aumentar area do gol;
