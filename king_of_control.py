@@ -344,6 +344,14 @@ class KingOfControl:
                 self.cameras.init2.set_exposure(self.cameras.init2.get_exposure() + 1)
             elif key == ord('f'):
                 self.show_cameras_vertically = not self.show_cameras_vertically
+            elif key == ord('c'):
+                self.game_vars.current_status = GameStatus.OFF
+                self.led_panel.set_state(self.game_vars.current_status)
+
+                self.calibrate_cameras()
+
+                self.game_vars.current_status = GameStatus.END
+
 
         time_left = param.MAX_TIME - self.game_vars.playing_time
         score = self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong), time_left)
@@ -821,23 +829,26 @@ class KingOfControl:
             self.cameras.init2.set_exposure(best_exposure, save=False)
             logger.debug(f"final best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {self.cameras.init2.get_exposure()}")
 
+    def calibrate_cameras(self):
+        try:  # automatic calibration
+            self.calibration_auto_exposure()
+            self.calibration()
+            self.calibration_debug()
+        except RuntimeError:
+            while True:
+                try:
+                    self.manual_calibration()
+                    self.calibration_debug()
+                    break
+                except RuntimeError:
+                    pass
+
     def run(self):
         try:
             calibration_loaded = self.camera_setup()
 
             if not calibration_loaded:
-                try: # automatic calibration
-                    self.calibration_auto_exposure()
-                    self.calibration()
-                    self.calibration_debug()
-                except RuntimeError:
-                    while True:
-                        try:
-                            self.manual_calibration()
-                            self.calibration_debug()
-                            break
-                        except RuntimeError:
-                            pass
+                self.calibrate_cameras()
 
             self.led_panel.start()
             self.game()
