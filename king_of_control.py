@@ -165,6 +165,13 @@ class KingOfControl:
         cv2.destroyWindow("game")
         exit(0)
 
+    def get_hex_under_ball_and_show_cameras(self):
+        hex, frame1, frame2 = self.get_hex_under_ball(self.game_vars.ball_detector)
+        composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
+        cv2.imshow("game", composed_frame)
+
+        return hex
+
     def run_cta(self):
         logger.debug("Running CTA")
         # waits for the player to put the ball on one of the first hexagons
@@ -182,10 +189,7 @@ class KingOfControl:
         self.board.set_hexagon(0, 0, hex_color)
         self.board.set_hexagon(1, 0, hex_color)
 
-        hex, frame1, frame2 = self.get_hex_under_ball(self.game_vars.ball_detector)
-
-        composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
-        cv2.imshow("game", composed_frame)
+        hex = self.get_hex_under_ball_and_show_cameras()
 
         # put the ball in one the starting hexagons
         if hex and hex[1] == 0:
@@ -195,6 +199,8 @@ class KingOfControl:
         return GameStatus.CTA
 
     def run_countdown(self):
+        self.get_hex_under_ball_and_show_cameras()
+
         duration = time.time() - self.game_vars.change_status_time
         if duration >= param.COUNTDOWN_TIME:
             return GameStatus.GAME
@@ -232,7 +238,7 @@ class KingOfControl:
             self.game_vars.playing_time = param.MAX_TIME
             return GameStatus.END
 
-        hex, frame1, frame2 = self.get_hex_under_ball(self.game_vars.ball_detector)
+        hex = self.get_hex_under_ball_and_show_cameras()
 
         # if goal
         if hex and hex[1] == 8:
@@ -248,9 +254,6 @@ class KingOfControl:
             self.game_vars.wrong.add(hex)
             logger.info(f"Score: {self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong), 0.0)}")
             return GameStatus.OFFSIDE
-
-        composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
-        cv2.imshow("game", composed_frame)
 
         return GameStatus.GAME
 
