@@ -4,11 +4,11 @@ Codigo para controle de um jogo de controle de bola em um campo com hexagonos qu
 TO DO:
 1. Logs no servidor de logs;
 2. Treinar bola com modelo maior;
-3. Modo para visualizar as cameras lado a lado durante o jogo;
 4. Recalibracao sem necessidade de reinicar o jogo; 
 5. Modo de rastrear a bola no tablado;
 6. Modo jogo com pontos;
 7. Arquivo app.py para chamar o jogo;
+8. Poder sair do jogo em qualquer tela;
 
 Done:
 
@@ -20,3 +20,4 @@ Done:
 * Melhorar ponto calculado de base da bola;
 * Aumentar area do gol;
 * Mostrar frames quando for impedimento;
+* Modo para visualizar as cameras lado a lado durante o jogo;

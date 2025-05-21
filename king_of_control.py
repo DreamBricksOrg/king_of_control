@@ -10,7 +10,7 @@ from hex_board_model import HexBoardModel
 from yolo_object_detector import YoloObjectDetector
 from dual_camera import DualCamera
 import time
-from cv2_utils import stack_frames_vertically, draw_cross, draw_yolo_box
+from cv2_utils import stack_frames_vertically, stack_frames_horizontally, draw_cross, draw_yolo_box
 from hex_graph import HexGraph
 from led_panel import LedPanel
 from game_status import GameStatus
@@ -115,6 +115,7 @@ class KingOfControl:
         self.game_vars = self.GameVariables(self.graph)
         self.prev_camera1_exposure = 0
         self.prev_camera2_exposure = 0
+        self.show_cameras_vertically = True
 
     def camera_setup(self):
         final_width = 800
@@ -167,7 +168,9 @@ class KingOfControl:
 
     def get_hex_under_ball_and_show_cameras(self):
         hex, frame1, frame2 = self.get_hex_under_ball(self.game_vars.ball_detector)
-        composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
+        composed_frame = \
+            stack_frames_vertically(frame1, frame2, 640, 720) if self.show_cameras_vertically else \
+            stack_frames_horizontally(frame1, frame2, 800, 225)
         cv2.imshow("game", composed_frame)
 
         return hex
@@ -339,6 +342,8 @@ class KingOfControl:
                 self.cameras.init2.set_exposure(self.cameras.init2.get_exposure() - 1)
             elif key == ord('x'):
                 self.cameras.init2.set_exposure(self.cameras.init2.get_exposure() + 1)
+            elif key == ord('f'):
+                self.show_cameras_vertically = not self.show_cameras_vertically
 
         time_left = param.MAX_TIME - self.game_vars.playing_time
         score = self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong), time_left)
