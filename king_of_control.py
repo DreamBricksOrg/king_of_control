@@ -2,6 +2,7 @@ import copy
 import traceback
 import json
 from typing import List, Tuple
+from enum import Enum
 
 import cv2
 import parameters as param
@@ -77,6 +78,11 @@ class KingOfControl:
                           self.graph.create_random_path_target_size(1, param.TARGET_PATH_SIZE)]
             return self.paths
 
+    class GameMode(Enum):
+        NORMAL = 0
+        TRACK = 1
+        POINTS = 2
+
     def __init__(self):
         self.clicked_point = None
         self.RED = (255, 0, 0)
@@ -116,6 +122,7 @@ class KingOfControl:
         self.prev_camera1_exposure = 0
         self.prev_camera2_exposure = 0
         self.show_cameras_vertically = True
+        self.game_mode = param.GAME_MODE
 
     def camera_setup(self):
         final_width = 800
@@ -322,42 +329,7 @@ class KingOfControl:
                     self.board.clear()
 
             key = cv2.waitKey(1) & 0xFF
-            if key == ord('q'):
-                logger.info("Exiting program")
-                self.shutdown()
-            elif key == ord('b'):
-                self.game_vars.draw_ball = not self.game_vars.draw_ball
-                logger.debug(f"Draw ball: {self.game_vars.draw_ball}")
-            elif key == ord('p'):
-                if self.game_vars.current_status == GameStatus.OFF:
-                    self.game_vars.current_status = GameStatus.END
-                else:
-                    self.game_vars.current_status = GameStatus.OFF
-                    self.led_panel.set_state(self.game_vars.current_status)
-            elif key == ord('a'):
-                self.cameras.init1.set_exposure(self.cameras.init1.get_exposure() - 1)
-            elif key == ord('s'):
-                self.cameras.init1.set_exposure(self.cameras.init1.get_exposure() + 1)
-            elif key == ord('z'):
-                self.cameras.init2.set_exposure(self.cameras.init2.get_exposure() - 1)
-            elif key == ord('x'):
-                self.cameras.init2.set_exposure(self.cameras.init2.get_exposure() + 1)
-            elif key == ord('f'):
-                self.show_cameras_vertically = not self.show_cameras_vertically
-            elif key == ord('c'):
-                self.game_vars.current_status = GameStatus.OFF
-                self.led_panel.set_state(self.game_vars.current_status)
-
-                self.calibrate_cameras()
-
-                self.game_vars.current_status = GameStatus.END
-
-
-        time_left = param.MAX_TIME - self.game_vars.playing_time
-        score = self.calculate_score(len(self.game_vars.correct), len(self.game_vars.wrong), time_left)
-        logger.debug(f"Score: {score}")
-        self.led_panel.set_score_value(int(score))
-        # self.led_panel.set_state()
+            self.process_key_press(key)
 
     def game_db(self):
         white = (255, 255, 255)
@@ -501,11 +473,41 @@ class KingOfControl:
 
         return hex, frame1, frame2
 
+    def process_key_press(self, key):
+        if key == ord('q'):
+            logger.info("Exiting program")
+            self.shutdown()
+        elif key == ord('p'):
+            if self.game_vars.current_status == GameStatus.OFF:
+                self.game_vars.current_status = GameStatus.END
+            else:
+                self.game_vars.current_status = GameStatus.OFF
+                self.led_panel.set_state(self.game_vars.current_status)
+        elif key == ord('b'):
+            self.game_vars.draw_ball = not self.game_vars.draw_ball
+            logger.debug(f"Draw ball: {self.game_vars.draw_ball}")
+        elif key == ord('a'):
+            self.cameras.init1.set_exposure(self.cameras.init1.get_exposure() - 1)
+        elif key == ord('s'):
+            self.cameras.init1.set_exposure(self.cameras.init1.get_exposure() + 1)
+        elif key == ord('z'):
+            self.cameras.init2.set_exposure(self.cameras.init2.get_exposure() - 1)
+        elif key == ord('x'):
+            self.cameras.init2.set_exposure(self.cameras.init2.get_exposure() + 1)
+        elif key == ord('f'):
+            self.show_cameras_vertically = not self.show_cameras_vertically
+        elif key == ord('c'):
+            self.game_vars.current_status = GameStatus.OFF
+            self.led_panel.set_state(self.game_vars.current_status)
+
+            self.calibrate_cameras()
+
+            self.game_vars.current_status = GameStatus.END
+
     def track_ball(self):
-        ball_detector = YoloObjectDetector(class_id=param.YOLO_MODEL_BALL_ID, model_path=param.YOLO_MODEL_BALL)
         last_hex = None
         while True:
-            hex, frame1, frame2 = self.get_hex_under_ball(ball_detector)
+            hex = self.get_hex_under_ball_and_show_cameras()
 
             if hex != last_hex:
                 if last_hex is not None:
@@ -514,13 +516,8 @@ class KingOfControl:
                     self.board.set_hexagon(*hex, (255, 255, 0))
                 last_hex = hex
 
-            composed_frame = stack_frames_vertically(frame1, frame2, 640, 720)
-            winname = "Pressione espaco para continuar..."
-            cv2.imshow(winname, composed_frame)
-
-            if cv2.waitKey(1) & 0xFF == ord(' '):
-                cv2.destroyWindow(winname)
-                break
+            key = cv2.waitKey(1) & 0xFF
+            self.process_key_press(key)
 
     def calibration_debug(self):
         magenta = (255, 0, 255)
@@ -704,7 +701,6 @@ class KingOfControl:
 
         return floor_quad1, floor_quad2
 
-
     @staticmethod
     def save_floor_quads(file_path: str, floor_quad1: List[int], floor_quad2: List[int]) -> None:
         data = {
@@ -851,7 +847,14 @@ class KingOfControl:
                 self.calibrate_cameras()
 
             self.led_panel.start()
-            self.game()
+
+            if self.game_mode == self.GameMode.NORMAL:
+                self.game()
+            elif self.game_mode == self.GameMode.TRACK:
+                self.track_ball()
+            elif self.game_mode == self.GameMode.POINTS:
+                self.game_db()
+
         except Exception as e:
             logger.critical(f"Error: {e}\n{traceback.format_exc()}")
 

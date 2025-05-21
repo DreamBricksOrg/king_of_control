@@ -7,6 +7,8 @@ CAMERA_RESOLUTION = (640, 360)
 ARDUINO_BAUD_RATE = 115200
 DUMMY_ARDUINO = 0  # set to 1 to run without an Arduino
 
+GAME_MODE = 0  # 0-NORMAL, 1-TRACK, 2-POINTS
+
 HEXAGONS_SVG_FILE = r"static\assets\hexagons2.svg"
 HEXAGONS_SVG_OFFSET = (-75.0, 150.0)
 
