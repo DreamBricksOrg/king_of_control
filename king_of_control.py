@@ -17,6 +17,7 @@ from led_panel import LedPanel
 from game_status import GameStatus
 import logging
 from utils import generate_timestamped_filename, ensure_directory
+from log_sender import LogSender
 
 
 # Custom filter to only allow selected INFO logs
@@ -91,6 +92,9 @@ class KingOfControl:
         self.WHITE = (255, 255, 255)
         self.BLACK = (0, 0, 0)
         self.HEX_CAL_COORD = [(2, 1), (0, 1), (0, 7), (2, 7)]
+
+        logger.debug("Init Logs")
+        self.log_sender = LogSender(param.LOG_API, param.LOG_PROJECT_ID)
 
         logger.debug("Init Arduino")
         self.board = HexagonsBoard(port=param.ARDUINO_COM_PORT, baudrate=param.ARDUINO_BAUD_RATE)
@@ -298,6 +302,7 @@ class KingOfControl:
 
             if self.game_vars.current_status != next_status:
                 logger.info(f"STATS: {next_status}")
+                self.log_sender.log(next_status.name)
                 self.game_vars.current_status = next_status
                 self.game_vars.change_status_time = time.time()
                 self.led_panel.set_state(self.game_vars.current_status)
