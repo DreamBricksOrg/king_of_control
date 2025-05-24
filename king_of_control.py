@@ -147,6 +147,12 @@ class KingOfControl:
             self.hex_model_cam1.set_calibration_points(floor_quad1)
             self.hex_model_cam2.set_calibration_points(floor_quad2)
             return True
+        elif key == ord('m'):
+            self.manual_calibration()
+            self.calibration_debug()
+            return True
+        elif key == ord('q'):
+            self.shutdown()
 
         return False
 
