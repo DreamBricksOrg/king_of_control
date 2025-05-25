@@ -81,12 +81,9 @@ class DualCamera:
                 cv2.imshow(window_title, composed_frame)
 
             key = cv2.waitKey(1) & 0xFF
-            if key == ord(' '):
+            if key in [ord(' '), ord('r'), ord('m'), ord('q')]:
                 cv2.destroyWindow(window_title)
                 break
-            elif key == ord('r'):
-                    cv2.destroyWindow(window_title)
-                    break
             elif key == ord('a'):
                 self.init1.set_exposure(self.init1.get_exposure()-1)
             elif key == ord('s'):
