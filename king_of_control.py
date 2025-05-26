@@ -653,7 +653,10 @@ class KingOfControl:
         return floor_quad1, floor_quad2
 
     @staticmethod
-    def save_floor_quads(file_path: str, floor_quad1: List[int], floor_quad2: List[int]) -> None:
+    def save_floor_quads(file_path: str, floor_quad1: List[Tuple[int, int]], floor_quad2: List[Tuple[int, int]]) -> None:
+        # make sure it's all integers
+        floor_quad1 = [(round(x[0]), round(x[1])) for x in floor_quad1]
+        floor_quad2 = [(round(x[0]), round(x[1])) for x in floor_quad2]
         data = {
             "floor_quad1": floor_quad1,
             "floor_quad2": floor_quad2
@@ -662,7 +665,7 @@ class KingOfControl:
             json.dump(data, f, indent=2)
 
     @staticmethod
-    def load_floor_quads(file_path: str) -> Tuple[List[int], List[int]]:
+    def load_floor_quads(file_path: str) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]:
         with open(file_path, 'r') as f:
             data = json.load(f)
         return data["floor_quad1"], data["floor_quad2"]
