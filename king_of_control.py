@@ -378,30 +378,28 @@ class KingOfControl:
     def get_hex_under_ball(self, ball_detector, update_frames=True):
         frame1, frame2 = self.cameras.get_frames()
 
-        bbox1, conf = ball_detector.detect_best(frame1, param.MIN_CONFIDENCE_BALL)
-        bbox2 = None
-
         hex = None
         cam_used = 0
         hexagon = None
         ball_pos = (0, 0)
-        if bbox1 is not None:
-            idx, enabled_polygon, ball_pos = self.hex_model_cam1.get_polygon_under_ball(bbox1)
-            cam_used = 1
-
-            if enabled_polygon:
-                hex = self.hex_model_cam1.hex_coordinates[idx]
-                hexagon = self.hex_model_cam1.pers_polygons[idx]
-
-        else:
-            bbox2, conf = ball_detector.detect_best(frame2, param.MIN_CONFIDENCE_BALL)
-            if bbox2 is not None:
-                idx, enabled_polygon, ball_pos = self.hex_model_cam2.get_polygon_under_ball(bbox2)
-                cam_used = 2
+        bbox = None
+        conf = 0
+        for cam_id in param.CAMERA_PRIORITY:
+            frame = frame1 if cam_id == 1 else frame2
+            bbox, conf = ball_detector.detect_best(frame, param.MIN_CONFIDENCE_BALL)
+            if bbox is not None:
+                idx, enabled_polygon, ball_pos = self.hex_model_cam1.get_polygon_under_ball(bbox)
+                cam_used = cam_id
 
                 if enabled_polygon:
-                    hex = self.hex_model_cam2.hex_coordinates[idx]
-                    hexagon = self.hex_model_cam2.pers_polygons[idx]
+                    if cam_id == 1:
+                        hex = self.hex_model_cam1.hex_coordinates[idx]
+                        hexagon = self.hex_model_cam1.pers_polygons[idx]
+                    else:
+                        hex = self.hex_model_cam2.hex_coordinates[idx]
+                        hexagon = self.hex_model_cam2.pers_polygons[idx]
+
+                break
 
         if update_frames:
             self.hex_model_cam1.draw_hexagons(frame1, color=(200, 100, 100))
@@ -411,14 +409,14 @@ class KingOfControl:
                 if hexagon is not None:
                     self.hex_model_cam1.draw_polylines(frame1, hexagon, color=(0, 255, 255))
                 if self.game_vars.draw_ball:
-                    draw_yolo_box(frame1, box=bbox1, label="Ball", conf=conf)
+                    draw_yolo_box(frame1, box=bbox, label="Ball", conf=conf)
                     draw_cross(frame1, ball_pos, color=(255, 255, 0))
 
             elif cam_used == 2:
                 if hexagon is not None:
                     self.hex_model_cam2.draw_polylines(frame2, hexagon, color=(0, 255, 255))
                 if self.game_vars.draw_ball:
-                    draw_yolo_box(frame2, box=bbox2, label="Ball", conf=conf)
+                    draw_yolo_box(frame2, box=bbox, label="Ball", conf=conf)
                     draw_cross(frame2, ball_pos, color=(255, 255, 0))
 
         return hex, frame1, frame2

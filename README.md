@@ -2,7 +2,7 @@ Codigo para controle de um jogo de controle de bola em um campo com hexagonos qu
 
 
 TO DO:
-1. Treinar bola com modelo maior;
+1. Treinar modelo com mais imagens em pouca e muita luz;
 7. Arquivo app.py para chamar o jogo;
 8. Poder sair do jogo em qualquer tela;
 9. Destruir tela de calibracao apos o uso;
@@ -22,3 +22,5 @@ Done:
 * Modo de rastrear a bola no tablado;
 * Modo jogo com pontos;
 * Logs no servidor de logs;
+* Treinar bola com modelo maior;
+* Config para dar prioridade para outra camera ou desabilitar uma camera;
