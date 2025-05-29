@@ -388,7 +388,8 @@ class KingOfControl:
             frame = frame1 if cam_id == 1 else frame2
             bbox, conf = ball_detector.detect_best(frame, param.MIN_CONFIDENCE_BALL)
             if bbox is not None:
-                idx, enabled_polygon, ball_pos = self.hex_model_cam1.get_polygon_under_ball(bbox)
+                hex_model_cam = self.hex_model_cam1 if cam_id == 1 else self.hex_model_cam2
+                idx, enabled_polygon, ball_pos = hex_model_cam.get_polygon_under_ball(bbox)
                 cam_used = cam_id
 
                 if enabled_polygon:
