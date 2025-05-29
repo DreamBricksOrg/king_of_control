@@ -4,7 +4,7 @@ import parameters as param
 
 class HexagonsBoard:
     def __init__(self, port, baudrate):
-        self.sender = ArduinoSerialSender(port, baudrate) if param.DUMMY_ARDUINO == 0 \
+        self.sender = ArduinoSerialSender(port, baudrate, sender_delay=param.ARDUINO_SENDER_DELAY) if param.DUMMY_ARDUINO == 0 \
             else DummyArduinoSerialSender()
 
     def set_hexagon(self, col, row, color):

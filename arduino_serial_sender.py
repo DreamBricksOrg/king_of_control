@@ -10,7 +10,8 @@ class ArduinoSerialSender:
     END_BYTE = 243
     NUM_BYTES = 6
 
-    def __init__(self, port, baudrate=115200, timeout=1):
+    def __init__(self, port, baudrate=115200, timeout=1, sender_delay=0.0):
+        self.sender_delay = sender_delay
         init_failed = False
         msg = ""
         try:
@@ -31,6 +32,8 @@ class ArduinoSerialSender:
 
         packet = bytearray([self.START_BYTE] + data + [self.END_BYTE])
         self.ser.write(packet)
+        if self.sender_delay > 0.0:
+            time.sleep(self.sender_delay)
 
     def read_serial(self):
         while self.ser.in_waiting > 0:
