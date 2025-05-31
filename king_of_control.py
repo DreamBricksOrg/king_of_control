@@ -436,13 +436,13 @@ class KingOfControl:
             self.game_vars.draw_ball = not self.game_vars.draw_ball
             logger.debug(f"Draw ball: {self.game_vars.draw_ball}")
         elif key == ord('a'):
-            self.cameras.init1.set_exposure(self.cameras.init1.get_exposure() - 1)
+            self.cameras.set_exposure1(self.cameras.get_exposure1() - 1)
         elif key == ord('s'):
-            self.cameras.init1.set_exposure(self.cameras.init1.get_exposure() + 1)
+            self.cameras.set_exposure1(self.cameras.get_exposure1() + 1)
         elif key == ord('z'):
-            self.cameras.init2.set_exposure(self.cameras.init2.get_exposure() - 1)
+            self.cameras.set_exposure2(self.cameras.get_exposure2() - 1)
         elif key == ord('x'):
-            self.cameras.init2.set_exposure(self.cameras.init2.get_exposure() + 1)
+            self.cameras.set_exposure2(self.cameras.get_exposure2() + 1)
         elif key == ord('f'):
             self.show_cameras_vertically = not self.show_cameras_vertically
         elif key == ord('c'):
@@ -708,13 +708,13 @@ class KingOfControl:
 
     def store_game_brightness(self):
         # store game brightness
-        self.prev_camera1_exposure = self.cameras.init1.get_exposure()
-        self.prev_camera2_exposure = self.cameras.init2.get_exposure()
+        self.prev_camera1_exposure = self.cameras.get_exposure1()
+        self.prev_camera2_exposure = self.cameras.get_exposure2()
 
     def restore_game_brightness(self):
         # restore game brightness
-        self.cameras.init1.set_exposure(self.prev_camera1_exposure)
-        self.cameras.init2.set_exposure(self.prev_camera2_exposure)
+        self.cameras.set_exposure1(self.prev_camera1_exposure)
+        self.cameras.set_exposure2(self.prev_camera2_exposure)
 
     def calibration_auto_exposure(self):
         self.display_all_calibration_hexagons()
@@ -746,9 +746,9 @@ class KingOfControl:
         best_exposure = min_exposure
         exposure = min_exposure
         if camera_id == 1:
-            self.cameras.init1.set_exposure(exposure, save=False)
+            self.cameras.set_exposure1(exposure, save=False)
         else:
-            self.cameras.init2.set_exposure(exposure, save=False)
+            self.cameras.set_exposure2(exposure, save=False)
         while exposure <= max_exposure:
             frame1, frame2 = self.cameras.get_frames()
             frame = frame1 if camera_id == 1 else frame2
@@ -765,18 +765,18 @@ class KingOfControl:
             cv2.waitKey(60)
             exposure = exposure + 1
             if camera_id == 1:
-                self.cameras.init1.set_exposure(exposure, save=False)
+                self.cameras.set_exposure1(exposure, save=False)
             else:
-                self.cameras.init2.set_exposure(exposure, save=False)
+                self.cameras.set_exposure2(exposure, save=False)
 
         _, _ = self.cameras.get_frames()
         cv2.waitKey(60)
         if camera_id == 1:
-            self.cameras.init1.set_exposure(best_exposure, save=False)
-            logger.debug(f"final best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {self.cameras.init1.get_exposure()}")
+            self.cameras.set_exposure1(best_exposure, save=False)
+            logger.debug(f"final best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {self.cameras.get_exposure1()}")
         else:
-            self.cameras.init2.set_exposure(best_exposure, save=False)
-            logger.debug(f"final best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {self.cameras.init2.get_exposure()}")
+            self.cameras.set_exposure2(best_exposure, save=False)
+            logger.debug(f"final best_score: {best_score}, score: {score}, boxes: {len(boxes)}, avg_conf: {avg_conf}, best_exposure: {best_exposure}, exposure: {self.cameras.get_exposure2()}")
 
     def calibrate_cameras(self):
         try:  # automatic calibration
